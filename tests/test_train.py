@@ -10,4 +10,4 @@ ds = NiftiDataset(sd,ages)
 
 model = MAPnet(ds.image_shape)
 
-train(ds,model,cuda=True)
+train(ds,model,cuda=True,batch_size=8)

@@ -6,8 +6,8 @@ def train(dataset, model, epochs=10, update_freq=1, batch_size=8, num_workers=1,
             cuda=False, loss_func=None, optimizer=None, scheduler=None):
 
     data_loader = DataLoader(dataset, num_workers=num_workers,
-                    pin_memory=cuda, batch_size=1)
-    desc_genr = lambda x,y: 'Epoch: {}\tLoss: {:.2f}'.format(x,y)
+                    pin_memory=cuda, batch_size=batch_size)
+    desc_genr = lambda x,y: 'Epoch: {} Loss: {:.2f}'.format(x,y)
 
     if cuda:
         model = model.cuda()
