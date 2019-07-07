@@ -22,11 +22,11 @@ class MAPnet(nn.Module):
             )
 
         n_filters = [2,3,4,4]
-        self.conv_layers = list()
+        conv_layers = list()
         self.n_channels=list([1])
         for i in range(0,4):
             self.n_channels.append(self.n_channels[-1] * n_filters[i])
-            self.conv_layers.append(
+            conv_layers.append(
                 nn.Conv3d(
                     in_channels=self.n_channels[-2], 
                     out_channels=self.n_channels[-1], 
@@ -39,6 +39,7 @@ class MAPnet(nn.Module):
                     padding_mode='zeros'
                 )
             )
+        self.conv_layers = nn.ModuleList(conv_layers)
         
         # calculate the size of flattening out the last conv layer
         layer_size = self.conv_layer_sizes[-1]

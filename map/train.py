@@ -29,8 +29,8 @@ def train(dataset, model, epochs=10, update_freq=1, batch_size=8, num_workers=1,
         for index, batch in enumerate(data_iterator):
             x,label = batch
             if cuda:
-                x = x.cuda()
-                label = label.cuda()
+                x = x.cuda().float()
+                label = label.cuda().float()
             else:
                 x = x.float()
                 label = label.float()
