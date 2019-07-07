@@ -3,8 +3,10 @@ from glob import glob
 import torch
 from torch.utils.data import Dataset
 import numpy as np
+import nibabel as nib
 
-def get_subject_dict(data_folder_path,dataset='train'):
+
+def get_sample_dict(data_folder_path,dataset='train'):
     """
     Return a dictionary of subject IDs and nifti files
     :param data_folder_path: path to the data folder
@@ -12,27 +14,82 @@ def get_subject_dict(data_folder_path,dataset='train'):
     """
     if (dataset != 'train') and (dataset != 'test'):
         raise ValueError('Invalid dataset')
-    if not os.isdir(os.path.join(data_folder_path,dataset)):
+    if not os.path.isdir(os.path.join(data_folder_path,dataset)):
         raise ValueError('Invalid data path')
 
 
     subject_dict = {}
     dataset_path = os.path.join(data_folder_path,dataset)
     for subject in os.listdir(dataset_path):
-        subject_path = os.path.join(dataset_path,subject)
-        # For now we'll just take the first nifti file
-        subject_dict[subject] = glob(subject_path,'*.nii*')[0]
+        glob_pattern = os.path.join(dataset_path,subject,'*.nii*')
+        subject_dict[subject] = glob(glob_pattern)
     return subject_dict 
+
+def get_sample_ages(ids,path_to_csv):
+    """
+    Return the ages of the requested IDs
+    :param ids: a list of subject ids
+    :param path_to_csv: a path to a csv containing ages for each subject.
+    This file must have a header reading "id","age" and each successive line
+    is a tuple of of the form "id,age" 
+    """
+    with open(path_to_csv,'r') as fh:
+        fh.readline()
+        id_to_age = {}
+        for line in fh:
+            line = line.rstrip('\n')
+            sid,age = line.split(',')
+            id_to_age[sid] = float(age)
+    return [id_to_age[i] for i in ids]
+        
 
 def check_subject_folder(path):
     return False
 
-class NiftiDataLoader(Dataset)
+class NiftiDataset(Dataset):
 
-    def __init__(self,files,labels=None):
+    def __init__(self,samples,labels=None):
+        """
+        Generate a Torch-style Dataset from a list of samples and list of labels
+        :param samples: a dict of lists -- the list should be a set of
+        files for the sample, and each key of the dict represents each sample
+        :param labels: if not None, this should be a list of same length as
+        samples, with each label being the supervised label of the corresponding
+        sample
+        """
 
-        pass
+        if (len(samples.keys()) != len(labels)) and labels is not None:
+            raise ValueError("Number of samples does not equal number of labels")
+        self.labels = labels
+        self.samples = list()
+        for indv in samples:
+            # load an nibabel image object for each file
+            self.samples.append([nib.load(fname) for fname in samples[indv]])
+
+        # Perform some sanity checks on the input files
+        samples_per_subject = None
+        image_shape = None
+        for indv in self.samples:
+            nsamples = len(indv)
+            if samples_per_subject is None:
+                samples_per_subject = nsamples
+            elif samples_per_subject != nsamples:
+                raise ValueError("Inconsistent number of files for each subject")
+
+            for img in indv:
+                if image_shape is None:
+                    image_shape = img.shape
+                elif image_shape != img.shape:
+                    raise ValueError("Inconsistent shapes between images")
 
     def __getitem__(self, index):
+        if self.labels is None:
+            label = None
+        else:
+            label = self.labels[index]
+        indv = self.samples[index]
+        img_array = np.concatenate([[img.get_fdata()] for img in indv],axis=0)
+        return (torch.from_numpy(img_array),label)
 
     def __len__(self):
+        return len(self.labels)
