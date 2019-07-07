@@ -57,7 +57,7 @@ class NiftiDataset(Dataset):
         samples, with each label being the supervised label of the corresponding
         sample
         """
-
+        super(NiftiDataset,self).__init__()
         if (len(samples.keys()) != len(labels)) and labels is not None:
             raise ValueError("Number of samples does not equal number of labels")
         self.labels = labels
@@ -67,19 +67,19 @@ class NiftiDataset(Dataset):
             self.samples.append([nib.load(fname) for fname in samples[indv]])
 
         # Perform some sanity checks on the input files
-        samples_per_subject = None
-        image_shape = None
+        self.images_per_subject = None
+        self.image_shape = None
         for indv in self.samples:
-            nsamples = len(indv)
-            if samples_per_subject is None:
-                samples_per_subject = nsamples
-            elif samples_per_subject != nsamples:
+            nimages = len(indv)
+            if self.images_per_subject is None:
+                self.images_per_subject = nimages
+            elif self.images_per_subject != nimages:
                 raise ValueError("Inconsistent number of files for each subject")
 
             for img in indv:
-                if image_shape is None:
-                    image_shape = img.shape
-                elif image_shape != img.shape:
+                if self.image_shape is None:
+                    self.image_shape = img.shape
+                elif self.image_shape != img.shape:
                     raise ValueError("Inconsistent shapes between images")
 
     def __getitem__(self, index):
