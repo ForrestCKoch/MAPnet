@@ -25,7 +25,7 @@ def train(train, test, model, epochs=10, update_freq=5, batch_size=8,
     if optimizer is None:
         optimizer = torch.optim.Adam
 
-    model_optimizer = optimizer(model.parameters())
+    model_optimizer = optimizer(model.parameters(),lr=0.01)
     model_scheduler = scheduler(model) if scheduler is not None else scheduler
     
 
@@ -35,6 +35,7 @@ def train(train, test, model, epochs=10, update_freq=5, batch_size=8,
             model_scheduler.step()
         data_iterator = tqdm(train_data_loader,desc=desc_genr(i,test_loss,0))
 
+        train_loss = list()
         for index, batch in enumerate(data_iterator):
             x,label = batch
             if cuda:
@@ -45,11 +46,12 @@ def train(train, test, model, epochs=10, update_freq=5, batch_size=8,
                 label = label.float()
             y = model(x)
             loss = loss_func(y,label.view(-1,1))
-            loss_value = float(loss.item())/batch_size
+            loss_value = float(loss.item())
+            train_loss.append(loss_value)
             model_optimizer.zero_grad()
             loss.backward()
             model_optimizer.step()  
-            data_iterator.set_description(desc_genr(i,test_loss,loss_value))
+            data_iterator.set_description(desc_genr(i,test_loss,np.mean(train_loss)))
     
         if (i+1)%update_freq==0:
             total_loss = 0.0
@@ -63,7 +65,7 @@ def train(train, test, model, epochs=10, update_freq=5, batch_size=8,
                     label = label.float()
                 y = model(x)
                 loss = loss_func(y,label.view(-1,1))
-                total_loss += float(loss.item())/batch_size
+                total_loss += float(loss.item())
             test_loss = total_loss/(index+1)
             
     
