@@ -1,6 +1,7 @@
 from tqdm import tqdm
 import torch
 from torch.utils.data import DataLoader
+import numpy as np
 
 def train(train, test, model, epochs=10, update_freq=5, batch_size=8, 
     num_workers=1, cuda=False, loss_func=None, optimizer=None, scheduler=None,):
