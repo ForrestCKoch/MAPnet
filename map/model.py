@@ -43,14 +43,14 @@ class MAPnet(nn.Module):
         
         # calculate the size of flattening out the last conv layer
         layer_size = self.conv_layer_sizes[-1]
-        fc_input_size  = int(np.prod(layer_size))*self.n_channels[-1]
-        self.fc1 = nn.Linear(fc_input_size,100) 
+        self.fc_input_size  = int(np.prod(layer_size))*self.n_channels[-1]
+        self.fc1 = nn.Linear(self.fc_input_size,100) 
         self.fc2 = nn.Linear(100,1)
 
     def forward(self,x): 
         for conv in self.conv_layers:
             x = F.relu(conv(x))
-        x = x.flatten()
+        x = x.view(-1,self.fc_input_size)
         x = F.sigmoid(self.fc1(x))
         x = F.relu(self.fc2(x))
         return x

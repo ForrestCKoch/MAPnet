@@ -35,7 +35,7 @@ def train(dataset, model, epochs=10, update_freq=1, batch_size=8, num_workers=1,
                 x = x.float()
                 label = label.float()
             y = model(x)
-            loss = loss_func(y,label)
+            loss = loss_func(y,label.view(-1,1))
             loss_value = float(loss.item())
             model_optimizer.zero_grad()
             loss.backward()
