@@ -5,6 +5,9 @@ import numpy as np
 
 def train(train, test, model, epochs=10, update_freq=5, batch_size=8, 
     num_workers=1, cuda=False, loss_func=None, optimizer=None, scheduler=None,):
+    """
+    Train the provided MAPnet
+    """
 
     train_data_loader = DataLoader(train, num_workers=num_workers,
                     pin_memory=cuda, batch_size=batch_size,

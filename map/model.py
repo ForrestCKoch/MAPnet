@@ -4,11 +4,23 @@ import torch.nn as nn
 import numpy as np
 
 def get_out_dims(inputs,padding,dilation,kernel,stride):
+    """
+    calculate the output dimensions of a Conv3d layer
+    :param inputs: 3 element vector for shape of input
+    :param padding: 3 element vector for padding parameters
+    :param dilation: 3 element vector for dilation parameters
+    :param kernel: 3 element vector for kernel parameters
+    :param stride: 3 element vector for stride parameters 
+    """
     return np.floor(1+(inputs-1+(2*padding)-(dilation*(kernel-1)))/stride)
 
 class MAPnet(nn.Module):
 
     def __init__(self,input_shape):
+        """
+        Initialize an instance of MAPnet
+        :param input_shape: shape of input image
+        """
         super(MAPnet,self).__init__()
         self.conv_layer_sizes = list([np.array(input_shape)])
         for i in range(0,4):
