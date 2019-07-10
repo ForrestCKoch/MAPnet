@@ -1,14 +1,41 @@
+from typing import Any, Option, Callable
 from tqdm import tqdm
 import torch
 from torch.utils.data import DataLoader
 import numpy as np
 
-def train(train, test, model, epochs=10, update_freq=5, batch_size=8, 
-    num_workers=1, cuda=False, loss_func=None, optimizer=None, scheduler=None,):
+# Use of typing inspired by https://github.com/vlukiyanov/pt-sdae
+def train(
+        train: torch.utils.data.Dataset, 
+        test: torch.utils.data.Dataset, 
+        model: torch.nn.Module, 
+        epochs: Optional[int] = 10, 
+        update_freq: Optional[int] = 5,
+        batch_size: Optional[int] = 8, 
+        num_workers: Optional[int] = 1, 
+        cuda: Optional[bool] = False, 
+        loss_func: Optional[Callable[[float,float],None]] = None, 
+        optimizer: Optional[Callable[[torch.nn.Module],torch.optim.Optimizer]]=None, 
+        scheduler: Optional[Callable[[int, torch.nn.Module],None]] = None
+    ) -> None:
     """
     Train the provided MAPnet
+    :param train: Dataset object containing the training data.
+    :param test: Dataset object containing the test data.
+    :param model: torch.nn.Module model to be trained.
+    :param epoch: The number of epochs to train over.
+    :param update_freq: Test set accuracy will be assessed every `update_freq` epochs.
+    :param batch_size: batch size for training.
+    :param num_workers: how many workers to use for the DataLoader.
+    :param cuda: Whether to use cuda device. Defaults to False.
+    :param loss_func: Loss function to use.  If `None` (default), MSELoss is used.
+    :param optimizer: Optimizer to use. If `None` (default), Adam is used.
+    :param scheduler: Scheduler to use. If `None` (default), no scheduler is used. 
     """
 
+    ###########################################################################
+    # Some preamble to get everything ready for training
+    ###########################################################################
     train_data_loader = DataLoader(train, num_workers=num_workers,
                     pin_memory=cuda, batch_size=batch_size,
                     shuffle=True)
@@ -33,6 +60,9 @@ def train(train, test, model, epochs=10, update_freq=5, batch_size=8,
     model_scheduler = scheduler(model) if scheduler is not None else scheduler
     
 
+    ###########################################################################
+    # Start Training Epoch
+    ###########################################################################
     for i in range(0, epochs):
 
         if model_scheduler is not None:
@@ -40,6 +70,9 @@ def train(train, test, model, epochs=10, update_freq=5, batch_size=8,
         data_iterator = tqdm(train_data_loader,desc=desc_genr(i,test_loss,0))
 
         train_loss = list()
+        #######################################################################
+        # Cycle through each batch in the epoch 
+        #######################################################################
         for index, batch in enumerate(data_iterator):
             x,label = batch
             if cuda:
@@ -57,6 +90,9 @@ def train(train, test, model, epochs=10, update_freq=5, batch_size=8,
             model_optimizer.step()  
             data_iterator.set_description(desc_genr(i,test_loss,np.mean(train_loss)))
     
+        #######################################################################
+        # Update test accuracy every `update_freq` number of epochs
+        #######################################################################
         if (i+1)%update_freq==0:
             total_loss = 0.0
             for index, batch in enumerate(test_data_loader):
