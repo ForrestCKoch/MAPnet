@@ -73,7 +73,7 @@ class NiftiDataset(Dataset):
         """
         super(NiftiDataset,self).__init__()
         if (len(samples.keys()) != len(labels)) and labels is not None:
-            raise ValueError("Number of samples does not equal number of labels")
+            raise ValueError("Number of samples ({}) does not equal number of labels ({}).".format(len(samples.keys()),len(labels)))
         self.cache_images = cache_images
         self.labels = labels
         self.samples = list()
