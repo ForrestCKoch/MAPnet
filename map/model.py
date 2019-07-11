@@ -75,7 +75,7 @@ class MAPnet(nn.Module):
                     stride=stride, 
                     padding=padding, 
                     dilation=dilation, 
-                    groups=1, 
+                    groups=self.n_channels[-2], 
                     bias=True, 
                     padding_mode='zeros'
                 )
