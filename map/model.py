@@ -1,23 +1,42 @@
+from typing import Any, Optional, Callable
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
 import numpy as np
 
-def get_out_dims(inputs,padding,dilation,kernel,stride):
+def get_out_dims(inputs: np.ndarray,
+                 padding: np.ndarray,
+                 dilation: np.ndarray,
+                 kernel: np.ndarray,
+                 stride: np.ndarray)->np.ndarray:
+    """
+    calculate the output dimensions of a Conv3d layer
+    :param inputs: 3 element vector for shape of input
+    :param padding: 3 element vector for padding parameters
+    :param dilation: 3 element vector for dilation parameters
+    :param kernel: 3 element vector for kernel parameters
+    :param stride: 3 element vector for stride parameters 
+    """
+    
     return np.floor(1+(inputs-1+(2*padding)-(dilation*(kernel-1)))/stride)
 
 class MAPnet(nn.Module):
 
-    def __init__(self,input_shape):
+    def __init__(self,input_shape: tuple):
+        """
+        Initialize an instance of MAPnet
+        :param input_shape: shape of input image
+        """
         super(MAPnet,self).__init__()
         self.conv_layer_sizes = list([np.array(input_shape)])
         for i in range(0,4):
             self.conv_layer_sizes.append(
-                get_out_dims(self.conv_layer_sizes[-1],
-                    np.array([2,2,2]),
-                    np.array([1,1,1]),
-                    np.array([5,5,5]),
-                    np.array([3,3,3])
+                get_out_dims(
+                    self.conv_layer_sizes[-1], # input dimensions    
+                    np.repeat(0,3), # padding
+                    np.repeat(1,3), # dilation
+                    np.repeat(3,3), # kernel
+                    np.repeat(3,3), # stride
                 )
             )
         print(self.conv_layer_sizes)
