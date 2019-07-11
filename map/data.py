@@ -1,3 +1,4 @@
+from typing import Any, Optional, Tuple, List, Dict
 import os
 from glob import glob
 import torch
@@ -6,7 +7,10 @@ import numpy as np
 import nibabel as nib
 
 
-def get_sample_dict(data_folder_path,dataset='train'):
+def get_sample_dict(
+        data_folder_path: str,
+        dataset: Optional[str] = 'train'
+    ) -> Dict[str,List[str]]:
     """
     Return a dictionary of subject IDs and nifti files
     :param data_folder_path: path to the data folder
@@ -17,7 +21,6 @@ def get_sample_dict(data_folder_path,dataset='train'):
     if not os.path.isdir(os.path.join(data_folder_path,dataset)):
         raise ValueError('Invalid data path')
 
-
     subject_dict = {}
     dataset_path = os.path.join(data_folder_path,dataset)
     for subject in os.listdir(dataset_path):
@@ -25,7 +28,10 @@ def get_sample_dict(data_folder_path,dataset='train'):
         subject_dict[subject] = glob(glob_pattern)
     return subject_dict 
 
-def get_sample_ages(ids,path_to_csv):
+def get_sample_ages(
+        ids : List[str],
+        path_to_csv: str
+    ) -> List[float]:
     """
     Return the ages of the requested IDs
     :param ids: a list of subject ids
@@ -48,7 +54,11 @@ def check_subject_folder(path):
 
 class NiftiDataset(Dataset):
 
-    def __init__(self,samples,labels=None,cache_images=False):
+    def __init__(
+        self,
+        samples: Dict[str,List[str]],
+        labels: Any = None,
+        cache_images: bool = False):
         """
         Generate a Torch-style Dataset from a list of samples and list of labels
         :param samples: a dict of lists -- the list should be a set of
@@ -94,6 +104,7 @@ class NiftiDataset(Dataset):
         indv = self.samples[index]
         img_array = np.concatenate([[img.get_fdata()] for img in indv],axis=0)
         ret = (torch.from_numpy(img_array),label)
+        # remove the cached image unless the `cache_image` flag is set
         if not self.cache_images:
             for img in indv:
                 img.uncache()
