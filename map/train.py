@@ -1,4 +1,4 @@
-from typing import Any, Option, Callable
+from typing import Any, Optional, Callable
 from tqdm import tqdm
 import torch
 from torch.utils.data import DataLoader

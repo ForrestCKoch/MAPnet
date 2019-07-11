@@ -29,7 +29,7 @@ class MAPnet(nn.Module):
         """
         super(MAPnet,self).__init__()
         self.conv_layer_sizes = list([np.array(input_shape)])
-        for i in range(0,4):
+        for i in range(0,3):
             self.conv_layer_sizes.append(
                 get_out_dims(
                     self.conv_layer_sizes[-1], # input dimensions    
@@ -41,18 +41,18 @@ class MAPnet(nn.Module):
             )
         print(self.conv_layer_sizes)
 
-        n_filters = [5,5,5,5]
+        n_filters = [4,4,4]
         conv_layers = list()
-        self.n_channels=list([1])
-        for i in range(0,4):
+        self.n_channels=list([4])
+        for i in range(0,3):
             self.n_channels.append(self.n_channels[-1] * n_filters[i])
             conv_layers.append(
                 nn.Conv3d(
                     in_channels=self.n_channels[-2], 
                     out_channels=self.n_channels[-1], 
-                    kernel_size=5, 
+                    kernel_size=3, 
                     stride=3, 
-                    padding=2, 
+                    padding=0, 
                     dilation=1, 
                     groups=1, 
                     bias=True, 
