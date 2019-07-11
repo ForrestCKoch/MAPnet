@@ -55,10 +55,11 @@ def check_subject_folder(path):
 class NiftiDataset(Dataset):
 
     def __init__(
-        self,
-        samples: Dict[str,List[str]],
-        labels: Any = None,
-        cache_images: bool = False):
+            self,
+            samples: Dict[str,List[str]],
+            labels: Any = None,
+            cache_images: bool = False
+        ):
         """
         Generate a Torch-style Dataset from a list of samples and list of labels
         :param samples: a dict of lists -- the list should be a set of
