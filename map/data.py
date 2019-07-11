@@ -89,7 +89,10 @@ class NiftiDataset(Dataset):
             label = self.labels[index]
         indv = self.samples[index]
         img_array = np.concatenate([[img.get_fdata()] for img in indv],axis=0)
-        return (torch.from_numpy(img_array),label)
+        ret = (torch.from_numpy(img_array),label)
+        for img in indv:
+            img.uncache()
+        return ret
 
     def __len__(self):
         return len(self.labels)
