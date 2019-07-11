@@ -45,6 +45,10 @@ class MAPnet(nn.Module):
         :param filters: List of filters per layer.
         :param input_channels: Number of input channels to the model. 
         """
+        if len(input_shape) != 3:
+            raise ValueError("Expected input_shape to have 3 dimensions not {}".format(len(input_shape)))
+        elif len(filters) != n_conv_layers:
+            raise ValueError("Length of filters ({}) does not match n_conv_layers ({})".format(len(filters),n_conv_layers))
         
         super(MAPnet,self).__init__()
         self.conv_layer_sizes = list([np.array(input_shape)])
