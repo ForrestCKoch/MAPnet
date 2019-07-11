@@ -48,18 +48,22 @@ def check_subject_folder(path):
 
 class NiftiDataset(Dataset):
 
-    def __init__(self,samples,labels=None):
+    def __init__(self,samples,labels=None,cache_images=False):
         """
         Generate a Torch-style Dataset from a list of samples and list of labels
         :param samples: a dict of lists -- the list should be a set of
         files for the sample, and each key of the dict represents each sample
-        :param labels: if not None, this should be a list of same length as
+        :param labels: If not None, this should be a list of same length as
         samples, with each label being the supervised label of the corresponding
         sample
+        :param cache_images: If True, nibabel will be allowed to cache images in
+        memory.  Defaults to False (images will be read from disk each time they
+        are requested).
         """
         super(NiftiDataset,self).__init__()
         if (len(samples.keys()) != len(labels)) and labels is not None:
             raise ValueError("Number of samples does not equal number of labels")
+        self.cache_images = cache_images
         self.labels = labels
         self.samples = list()
         for indv in samples:
@@ -90,8 +94,9 @@ class NiftiDataset(Dataset):
         indv = self.samples[index]
         img_array = np.concatenate([[img.get_fdata()] for img in indv],axis=0)
         ret = (torch.from_numpy(img_array),label)
-        for img in indv:
-            img.uncache()
+        if not self.cache_images:
+            for img in indv:
+                img.uncache()
         return ret
 
     def __len__(self):
