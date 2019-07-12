@@ -6,16 +6,18 @@ import numpy as np
 
 import argparse
 
+from map.defaults import *
+
 # Use of typing inspired by https://github.com/vlukiyanov/pt-sdae
 def train(
         train: torch.utils.data.Dataset, 
         test: torch.utils.data.Dataset, 
         model: torch.nn.Module, 
-        epochs: Optional[int] = 10, 
-        update_freq: Optional[int] = 5,
-        batch_size: Optional[int] = 8, 
-        num_workers: Optional[int] = 1, 
-        cuda: Optional[bool] = False, 
+        epochs: Optional[int] = EPOCHS, 
+        update_freq: Optional[int] = UPDATE_FREQ,
+        batch_size: Optional[int] = BATCH_SIZE, 
+        num_workers: Optional[int] = WORKERS, 
+        cuda: Optional[bool] = CUDA, 
         loss_func: Optional[Callable[[float,float],None]] = None, 
         optimizer: Optional[Callable[[torch.nn.Module],torch.optim.Optimizer]]=None, 
         scheduler: Optional[Callable[[int, torch.nn.Module],None]] = None
@@ -114,9 +116,113 @@ def _get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--datapath",
-        type=str,
-        default='data'
+        type = str,
+        default = DATAPATH,
+        help = "path to data folder [Default: '{}']".format(DATAPATH)
     )
+    parser.add_argument(
+        "--conv-layers",
+        type = int,
+        default = CONV_LAYERS,
+        help = "number of Conv3d layers [Default: {}]".format(CONV_LAYERS)
+    )
+    parser.add_argument(
+        "--kernel-size",
+        type = int,
+        default = KERNEL_SIZE,
+        help = "kernel size of each filter [Default: {}]".format(KERNEL_SIZE)
+    )
+    parser.add_argument(
+        "--dilation",
+        type = int,
+        default = DILATION,
+        help = "dilation factor for each filter [Default: {}]".format(DILATION)
+    )
+    parser.add_argument(
+        "--padding",
+        type = int,
+        default = PADDING,
+        help = "zero padding to be used in Conv3d layers [Default: {}]".format(PADDING)
+    )
+    parser.add_argument(
+        "--stride",
+        type = int,
+        default = STRIDE,
+        help = "stride between filter applications [Default: {}]".format(STRIDE)
+    )
+    parser.add_argument(
+        "--filters",
+        nargs = '+',
+        type = int,
+        default = [4,4,4],
+        help = "filters to apply to each channel -- one entry per layer [Default: {}]".format(' '.join(FILTERS))
+    )
+    parser.add_arguments(
+        "--batch-size",
+        type = int,
+        default = 32,
+        help = "number of samples per batch [Default: {}]".format(BATCH_SIZE)
+    )
+    parser.add_arguments(
+        "--epochs",
+        type = int,
+        default = EPOCHS,
+        help = "number of epochs to train over [Default: {}]".format(EPOCHS)
+    )
+    parser.add_arguments(
+        "--update-freq",
+        type = int,
+        default = UPDATE_FREQ,
+        help = "how often (in epochs) to asses test set accuracy [Default: {}]".format(UPDATE_FREQ)
+    )
+    parser.add_arguments(
+        "--learning-rate",
+        type = float,
+        default = 0.001,
+        help = "learning rate paramater [Default: {}]".format(LEARNING_RATE)
+    )
+    parser.add_arguments(
+        "--workers",
+        type = int,
+        default = 8,
+        help = "number of workers in DataLoader [Default: {}]".format(WORKERS)
+    )
+    parser.add_arguments(
+        "--cuda",
+        action="store_true",
+        help = "set flag to use cuda device(s)"
+    )
+
+    # not implemented
+    parser.add_arguments(
+        "--subpooling",
+        action="store_true",
+        help = "set flag to use subpooling between Conv3d layers"
+    )
+    parser.add_arguments(
+        "--scale-inputs",
+        action="store_true",
+        help = "set flag to scale input images"
+    )
+    parser.add_argument(
+        "--encode-age",
+        action="store_true",
+        help = "set flag to encode age in a binary vector"
+    )
+    parser.add_argument(
+        "--savepath",
+        type = str,
+        default = SAVEPATH,
+        help = "folder where model checkpoints should be saved -- if None model will not be saved [Default: {}]".format(str(SAVEPATH))
+    )
+    parser.add_argument(
+        "--save-freq",
+        type = str,
+        default = SAVE_FREQ,
+        help = "how often model checkpoints should be saved (in epochs) [Default: {}]".format(SAVE_FREQ)
+    )
+    
+
     return parser
             
 if __name__ == '__main__': 
