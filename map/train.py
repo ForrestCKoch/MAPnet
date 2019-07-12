@@ -6,7 +6,10 @@ import numpy as np
 
 import argparse
 
-from map.defaults import *
+from defaults import *
+from data import *
+from model import *
+from train import *
 
 # Use of typing inspired by https://github.com/vlukiyanov/pt-sdae
 def train(
@@ -155,51 +158,51 @@ def _get_parser():
         nargs = '+',
         type = int,
         default = [4,4,4],
-        help = "filters to apply to each channel -- one entry per layer [Default: {}]".format(' '.join(FILTERS))
+        help = "filters to apply to each channel -- one entry per layer [Default: {}]".format(' '.join([str(x) for x in FILTERS]))
     )
-    parser.add_arguments(
+    parser.add_argument(
         "--batch-size",
         type = int,
         default = 32,
         help = "number of samples per batch [Default: {}]".format(BATCH_SIZE)
     )
-    parser.add_arguments(
+    parser.add_argument(
         "--epochs",
         type = int,
         default = EPOCHS,
         help = "number of epochs to train over [Default: {}]".format(EPOCHS)
     )
-    parser.add_arguments(
+    parser.add_argument(
         "--update-freq",
         type = int,
         default = UPDATE_FREQ,
         help = "how often (in epochs) to asses test set accuracy [Default: {}]".format(UPDATE_FREQ)
     )
-    parser.add_arguments(
+    parser.add_argument(
         "--learning-rate",
         type = float,
         default = 0.001,
         help = "learning rate paramater [Default: {}]".format(LEARNING_RATE)
     )
-    parser.add_arguments(
+    parser.add_argument(
         "--workers",
         type = int,
         default = 8,
         help = "number of workers in DataLoader [Default: {}]".format(WORKERS)
     )
-    parser.add_arguments(
+    parser.add_argument(
         "--cuda",
         action="store_true",
         help = "set flag to use cuda device(s)"
     )
 
     # not implemented
-    parser.add_arguments(
+    parser.add_argument(
         "--subpooling",
         action="store_true",
         help = "set flag to use subpooling between Conv3d layers"
     )
-    parser.add_arguments(
+    parser.add_argument(
         "--scale-inputs",
         action="store_true",
         help = "set flag to scale input images"
@@ -226,4 +229,27 @@ def _get_parser():
     return parser
             
 if __name__ == '__main__': 
-    pass
+    parser = _get_parser()
+    args = parser.parse_args()
+
+    train_dict = get_sample_dict(args.datapath,dataset='train')
+    train_ages = get_sample_ages(train_dict.keys(),os.path.join(args.datapath,'subject_info.csv'))
+    train_ds = NiftiDataset(train_dict,train_ages)
+
+    test_dict = get_sample_dict(args.datapath,dataset='test')
+    test_ages = get_sample_ages(test_dict.keys(),os.path.join(args.datapath,'subject_info.csv'))
+    test_ds = NiftiDataset(test_dict,test_ages,cache_images=False)
+
+    model = MAPnet(train_ds.image_shape,input_channels=train_ds.images_per_subject)
+    #print(count_parameters(model))
+
+    train(
+        train_ds,
+        test_ds,
+        model,
+        cuda=args.cuda,
+        batch_size=args.batch_size,
+        num_workers=args.workers,
+        epochs=args.epochs,
+        update_freq=args.update_freq
+    )
