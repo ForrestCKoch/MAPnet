@@ -4,6 +4,8 @@ import torch
 from torch.utils.data import DataLoader
 import numpy as np
 
+import argparse
+
 # Use of typing inspired by https://github.com/vlukiyanov/pt-sdae
 def train(
         train: torch.utils.data.Dataset, 
@@ -22,7 +24,7 @@ def train(
     Train the provided MAPnet
     :param train: Dataset object containing the training data.
     :param test: Dataset object containing the test data.
-    :param model: torch.nn.Module model to be trained.
+    :param model: `torch.nn.Module` model to be trained.
     :param epoch: The number of epochs to train over.
     :param update_freq: Test set accuracy will be assessed every `update_freq` epochs.
     :param batch_size: batch size for training.
@@ -107,5 +109,15 @@ def train(
                 loss = loss_func(y,label.view(-1,1))
                 total_loss += float(loss.item())
             test_loss = total_loss/(index+1)
+
+def _get_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--datapath",
+        type=str,
+        default='data'
+    )
+    return parser
             
-    
+if __name__ == '__main__': 
+    pass

@@ -12,7 +12,7 @@ def get_out_dims(
         stride: np.ndarray
     )->np.ndarray:
     """
-    calculate the output dimensions of a Conv3d layer
+    calculate the output dimensions of a `nn.Conv3d` layer
     :param inputs: 3 element vector for shape of input
     :param padding: 3 element vector for padding parameters
     :param dilation: 3 element vector for dilation parameters
