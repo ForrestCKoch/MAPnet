@@ -56,7 +56,7 @@ def train(
     if optimizer is None:
         optimizer = torch.optim.Adam
 
-    model_optimizer = optimizer(model.parameters(),lr=0.01,weight_decay=0.1)
+    model_optimizer = optimizer(model.parameters(),lr=0.001)
     model_scheduler = scheduler(model) if scheduler is not None else scheduler
     
 
