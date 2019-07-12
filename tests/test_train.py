@@ -10,7 +10,7 @@ train_dict = get_sample_dict('dwi_data',dataset='train')
 train_ages = get_sample_ages(train_dict.keys(),'dwi_data/subject_info.csv')
 train_ds = NiftiDataset(train_dict,train_ages)
 
-test_dict = get_sample_dict('dwi_data',dataset='train')
+test_dict = get_sample_dict('dwi_data',dataset='test')
 test_ages = get_sample_ages(test_dict.keys(),'dwi_data/subject_info.csv')
 test_ds = NiftiDataset(test_dict,test_ages,cache_images=False)
 
