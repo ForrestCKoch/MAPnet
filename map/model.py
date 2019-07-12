@@ -1,4 +1,4 @@
-from typing import Any, Optional, Callable, Tuple
+from typing import Any, Optional, Callable, Tuple, List
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
@@ -27,9 +27,9 @@ class MAPnet(nn.Module):
             self, 
             input_shape: Tuple[int,int,int],
             n_conv_layers: int = 3,
-            padding: int = 0,
-            dilation: int = 3,
-            kernel: int = 3,
+            padding: int = 2,
+            dilation: int = 1,
+            kernel: int = 5,
             stride: int = 3,
             filters: List[int] = [4,4,4],
             input_channels: int = 1,
@@ -85,6 +85,12 @@ class MAPnet(nn.Module):
         # calculate the size of flattening out the last conv layer
         layer_size = self.conv_layer_sizes[-1]
         self.fc_input_size  = int(np.prod(layer_size))*self.n_channels[-1]
+        print("Conv3d sizes")
+        print(self.conv_layer_sizes)
+        print("Number of channels")
+        print(self.n_channels)
+        print("Output nodes of convolutions")
+        print(self.fc_input_size)
         self.fc1 = nn.Linear(self.fc_input_size,int(self.fc_input_size/2)) 
         self.fc2 = nn.Linear(int(self.fc_input_size/2),100) 
         self.fc3 = nn.Linear(100,1)

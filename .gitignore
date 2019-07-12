@@ -4,3 +4,4 @@ data/*
 *.temp
 *.pyc
 *.pyo
+__pycache__
