@@ -116,79 +116,79 @@ def train(
             test_loss = total_loss/(index+1)
 
 def _get_parser():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         "--datapath",
         type = str,
         default = DATAPATH,
-        help = "path to data folder [Default: '{}']".format(DATAPATH)
+        help = "path to data folder"
     )
     parser.add_argument(
         "--conv-layers",
         type = int,
         default = CONV_LAYERS,
-        help = "number of Conv3d layers [Default: {}]".format(CONV_LAYERS)
+        help = "number of Conv3d layers"
     )
     parser.add_argument(
         "--kernel-size",
         type = int,
         default = KERNEL_SIZE,
-        help = "kernel size of each filter [Default: {}]".format(KERNEL_SIZE)
+        help = "kernel size of each filter"
     )
     parser.add_argument(
         "--dilation",
         type = int,
         default = DILATION,
-        help = "dilation factor for each filter [Default: {}]".format(DILATION)
+        help = "dilation factor for each filter"
     )
     parser.add_argument(
         "--padding",
         type = int,
         default = PADDING,
-        help = "zero padding to be used in Conv3d layers [Default: {}]".format(PADDING)
+        help = "zero padding to be used in Conv3d layers"
     )
     parser.add_argument(
         "--stride",
         type = int,
         default = STRIDE,
-        help = "stride between filter applications [Default: {}]".format(STRIDE)
+        help = "stride between filter applications"
     )
     parser.add_argument(
         "--filters",
         nargs = '+',
         type = int,
         default = [4,4,4],
-        help = "filters to apply to each channel -- one entry per layer [Default: {}]".format(' '.join([str(x) for x in FILTERS]))
+        help = "filters to apply to each channel -- one entry per layer"
     )
     parser.add_argument(
         "--batch-size",
         type = int,
         default = 32,
-        help = "number of samples per batch [Default: {}]".format(BATCH_SIZE)
+        help = "number of samples per batch"
     )
     parser.add_argument(
         "--epochs",
         type = int,
         default = EPOCHS,
-        help = "number of epochs to train over [Default: {}]".format(EPOCHS)
+        help = "number of epochs to train over"
     )
     parser.add_argument(
         "--update-freq",
         type = int,
         default = UPDATE_FREQ,
-        help = "how often (in epochs) to asses test set accuracy [Default: {}]".format(UPDATE_FREQ)
+        help = "how often (in epochs) to asses test set accuracy"
     )
     parser.add_argument(
         "--learning-rate",
         type = float,
-        default = 0.001,
-        help = "learning rate paramater [Default: {}]".format(LEARNING_RATE)
+        default = LEARNING_RATE,
+        help = "learning rate paramater"
     )
     parser.add_argument(
         "--workers",
         type = int,
-        default = 8,
-        help = "number of workers in DataLoader [Default: {}]".format(WORKERS)
+        default = WORKERS,
+        help = "number of workers in DataLoader"
     )
     parser.add_argument(
         "--cuda",
@@ -216,13 +216,13 @@ def _get_parser():
         "--savepath",
         type = str,
         default = SAVEPATH,
-        help = "folder where model checkpoints should be saved -- if None model will not be saved [Default: {}]".format(str(SAVEPATH))
+        help = "folder where model checkpoints should be saved -- if None model will not be saved "
     )
     parser.add_argument(
         "--save-freq",
         type = str,
         default = SAVE_FREQ,
-        help = "how often model checkpoints should be saved (in epochs) [Default: {}]".format(SAVE_FREQ)
+        help = "how often model checkpoints should be saved (in epochs) "
     )
     
 
@@ -238,7 +238,7 @@ if __name__ == '__main__':
 
     test_dict = get_sample_dict(args.datapath,dataset='test')
     test_ages = get_sample_ages(test_dict.keys(),os.path.join(args.datapath,'subject_info.csv'))
-    test_ds = NiftiDataset(test_dict,test_ages,cache_images=False)
+    test_ds = NiftiDataset(test_dict,test_ages,cache_images=True)
 
     model = MAPnet(train_ds.image_shape,input_channels=train_ds.images_per_subject)
     #print(count_parameters(model))
