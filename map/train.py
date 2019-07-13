@@ -5,6 +5,8 @@ from torch.utils.data import DataLoader
 import numpy as np
 
 import argparse
+import os
+import datetime
 
 from defaults import *
 from data import *
@@ -18,6 +20,8 @@ def train(
         model: torch.nn.Module, 
         epochs: Optional[int] = EPOCHS, 
         update_freq: Optional[int] = UPDATE_FREQ,
+        savepath: Optional[str] = SAVEPATH,
+        save_freq: Optional[int] = SAVE_FREQ,
         batch_size: Optional[int] = BATCH_SIZE, 
         num_workers: Optional[int] = WORKERS, 
         cuda: Optional[bool] = CUDA, 
@@ -65,7 +69,8 @@ def train(
 
     model_optimizer = optimizer(model.parameters(),lr=0.00001)
     model_scheduler = scheduler(model) if scheduler is not None else scheduler
-    
+
+    save_folder = os.path.join(savepath,datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))    
 
     ###########################################################################
     # Start Training Epoch
@@ -114,6 +119,10 @@ def train(
                 loss = loss_func(y,label.view(-1,1))
                 total_loss += float(loss.item())
             test_loss = total_loss/(index+1)
+    
+        if (i+1)%save_freq==0:
+            torch.save(os.path.join(save_folder,'epoch-{}.dat'.format(i+1)))
+            
 
 def _get_parser():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -195,6 +204,18 @@ def _get_parser():
         action="store_true",
         help = "set flag to use cuda device(s)"
     )
+    parser.add_argument(
+        "--savepath",
+        type = str,
+        default = SAVEPATH,
+        help = "folder where model checkpoints should be saved -- if None model will not be saved "
+    )
+    parser.add_argument(
+        "--save-freq",
+        type = str,
+        default = SAVE_FREQ,
+        help = "how often model checkpoints should be saved (in epochs) "
+    )
 
     # not implemented
     parser.add_argument(
@@ -212,18 +233,6 @@ def _get_parser():
         action="store_true",
         help = "set flag to encode age in a binary vector"
     )
-    parser.add_argument(
-        "--savepath",
-        type = str,
-        default = SAVEPATH,
-        help = "folder where model checkpoints should be saved -- if None model will not be saved "
-    )
-    parser.add_argument(
-        "--save-freq",
-        type = str,
-        default = SAVE_FREQ,
-        help = "how often model checkpoints should be saved (in epochs) "
-    )
     
 
     return parser
@@ -240,16 +249,26 @@ if __name__ == '__main__':
     test_ages = get_sample_ages(test_dict.keys(),os.path.join(args.datapath,'subject_info.csv'))
     test_ds = NiftiDataset(test_dict,test_ages,cache_images=True)
 
-    model = MAPnet(train_ds.image_shape,input_channels=train_ds.images_per_subject)
-    #print(count_parameters(model))
+    model = MAPnet(
+        input_shape = train_ds.image_shape,
+        n_conv_layers = args.conv_layers,
+        padding = args.padding,
+        dilation = args.dilation,
+        kernel = args.kernel_size,
+        stride = args.stride,
+        filters = args.filters,
+        input_channels=train_ds.images_per_subject
+    )
 
     train(
         train_ds,
         test_ds,
         model,
-        cuda=args.cuda,
-        batch_size=args.batch_size,
-        num_workers=args.workers,
-        epochs=args.epochs,
-        update_freq=args.update_freq
+        cuda = args.cuda,
+        batch_size = args.batch_size,
+        num_workers = args.workers,
+        epochs = args.epochs,
+        update_freq = args.update_freq,
+        savepath = args.savepath,
+        savefreq = args.savefreq
     )
