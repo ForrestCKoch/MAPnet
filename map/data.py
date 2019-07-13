@@ -35,7 +35,7 @@ def get_sample_ages(
         path_to_csv: str
     ) -> List[float]:
     """
-    Return the ages of the requested IDs
+    Return the ages of the requested IDs.
     :param ids: a list of subject ids
     :param path_to_csv: a path to a csv containing ages for each subject.
     This file must have a header reading "id","age" and each successive line
@@ -68,13 +68,25 @@ def encode_age(
 def check_subject_folder(path):
     return False
 
+def scale_image(img: np.ndarray)->np.ndarray:
+    """
+    Return a copy of the array where all non-zero values have been scaled
+    between 0 and 1
+    :param img: img to be scaled
+    """
+    mn = np.min(img)
+    mx = np.mx(img)
+    return ((img-mn)/(-mn+mx))*(img != 0)
+    
+
 class NiftiDataset(Dataset):
 
     def __init__(
             self,
             samples: Dict[str,List[str]],
             labels: Any = None,
-            cache_images: bool = False,
+            scale_inputs: bool = False,
+            cache_images: bool = False
         ):
         """
         Generate a Torch-style Dataset from a list of samples and list of labels
@@ -90,6 +102,7 @@ class NiftiDataset(Dataset):
         super(NiftiDataset,self).__init__()
         if (len(samples.keys()) != len(labels)) and labels is not None:
             raise ValueError("Number of samples ({}) does not equal number of labels ({}).".format(len(samples.keys()),len(labels)))
+        self.scale_inputs = scale_inputs
         self.cache_images = cache_images
         self.labels = labels
         self.samples = list()
@@ -119,7 +132,18 @@ class NiftiDataset(Dataset):
         else:
             label = self.labels[index]
         indv = self.samples[index]
-        img_array = np.concatenate([[img.get_fdata()] for img in indv],axis=0)
+
+        if self.scale_inputs:
+            img_array = np.concatenate(
+                    [[scale_image(img.get_fdata())] for img in indv],
+                    axis=0
+            )
+        else:
+            img_array = np.concatenate(
+                    [[img.get_fdata()] for img in indv],
+                    axis=0
+            )
+
         ret = (torch.from_numpy(img_array),label)
         # remove the cached image unless the `cache_image` flag is set
         if not self.cache_images:

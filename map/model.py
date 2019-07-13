@@ -51,6 +51,19 @@ class MAPnet(nn.Module):
             raise ValueError("Length of filters ({}) does not match n_conv_layers ({})".format(len(filters),n_conv_layers))
         
         super(MAPnet,self).__init__()
+
+        # store arguments in a dictionary for loading/saving
+        self.arguments = {
+            'input_shape':input_shape,
+            'n_conv_layers':n_conv_layers,
+            'padding':padding,
+            'dilation':dilation,
+            'kernel':kernel,
+            'stride':stride,
+            'filters':filters,
+            'input_channels':input_channels,
+        } 
+
         self.conv_layer_sizes = list([np.array(input_shape)])
         for i in range(0,n_conv_layers):
             self.conv_layer_sizes.append(

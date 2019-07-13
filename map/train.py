@@ -216,17 +216,17 @@ def _get_parser():
         default = SAVE_FREQ,
         help = "how often model checkpoints should be saved (in epochs) "
     )
+    parser.add_argument(
+        "--scale-inputs",
+        action="store_true",
+        help = "set flag to scale input images"
+    )
 
     # not implemented
     parser.add_argument(
         "--subpooling",
         action="store_true",
         help = "set flag to use subpooling between Conv3d layers"
-    )
-    parser.add_argument(
-        "--scale-inputs",
-        action="store_true",
-        help = "set flag to scale input images"
     )
     parser.add_argument(
         "--encode-age",
@@ -243,11 +243,11 @@ if __name__ == '__main__':
 
     train_dict = get_sample_dict(args.datapath,dataset='train')
     train_ages = get_sample_ages(train_dict.keys(),os.path.join(args.datapath,'subject_info.csv'))
-    train_ds = NiftiDataset(train_dict,train_ages)
+    train_ds = NiftiDataset(train_dict,train_ages,scale_inputs=args.scale_inputs)
 
     test_dict = get_sample_dict(args.datapath,dataset='test')
     test_ages = get_sample_ages(test_dict.keys(),os.path.join(args.datapath,'subject_info.csv'))
-    test_ds = NiftiDataset(test_dict,test_ages,cache_images=True)
+    test_ds = NiftiDataset(test_dict,test_ages,scale_inputs=args.scale_inputs,cache_images=True)
 
     model = MAPnet(
         input_shape = train_ds.image_shape,
