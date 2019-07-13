@@ -10,21 +10,21 @@ from sklearn.preprocessing import StandardScaler
 
 
 def get_sample_dict(
-        data_folder_path: str,
+        datapath: str,
         dataset: Optional[str] = 'train'
     ) -> Dict[str,List[str]]:
     """
     Return a dictionary of subject IDs and nifti files
-    :param data_folder_path: path to the data folder
+    :param datapath: path to the data folder
     :param dataset: either 'train' or 'test'
     """
     if (dataset != 'train') and (dataset != 'test'):
         raise ValueError('Invalid dataset')
-    if not os.path.isdir(os.path.join(data_folder_path,dataset)):
+    if not os.path.isdir(os.path.join(datapath,dataset)):
         raise ValueError('Invalid data path')
 
     subject_dict = {}
-    dataset_path = os.path.join(data_folder_path,dataset)
+    dataset_path = os.path.join(datapath,dataset)
     for subject in os.listdir(dataset_path):
         glob_pattern = os.path.join(dataset_path,subject,'*.nii*')
         subject_dict[subject] = glob(glob_pattern)
@@ -33,7 +33,7 @@ def get_sample_dict(
 def get_sample_ages(
         ids : List[str],
         path_to_csv: str
-    ) -> List[float]:
+    ) -> np.ndarray:
     """
     Return the ages of the requested IDs.
     :param ids: a list of subject ids
@@ -48,7 +48,7 @@ def get_sample_ages(
             line = line.rstrip('\n')
             sid,age = line.split(',')
             id_to_age[sid] = float(age)
-    return [id_to_age[i] for i in ids]
+    return np.array([id_to_age[i] for i in ids])
     
 def encode_age(
         age: float,
