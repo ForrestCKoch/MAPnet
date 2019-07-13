@@ -71,6 +71,7 @@ def train(
     model_scheduler = scheduler(model) if scheduler is not None else scheduler
 
     save_folder = os.path.join(savepath,datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))    
+    os.makedirs(save_folder)
 
     ###########################################################################
     # Start Training Epoch
@@ -121,7 +122,7 @@ def train(
             test_loss = total_loss/(index+1)
     
         if (i+1)%save_freq==0:
-            torch.save(os.path.join(save_folder,'epoch-{}.dat'.format(i+1)))
+            torch.save(model, os.path.join(save_folder,'epoch-{}.dat'.format(i+1)))
             
 
 def _get_parser():
