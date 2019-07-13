@@ -49,7 +49,21 @@ def get_sample_ages(
             sid,age = line.split(',')
             id_to_age[sid] = float(age)
     return [id_to_age[i] for i in ids]
-        
+    
+def encode_age(
+        age: float,
+        bins: np.ndarray,
+    ):
+    """
+    Encode age as a binary vector according to the provided list.
+    Given a List [x_1 < x_2 < ... < x_n] a binary vector of
+    length n will be returned where each element is 1
+    if it is less than or equal to the give age and 0 otherwise.
+    :param age: age to be encoded
+    :param bins: List of bin boundaries 
+    """
+    return torch.from_numpy(np.array(bins <= age))
+     
 
 def check_subject_folder(path):
     return False
@@ -60,7 +74,7 @@ class NiftiDataset(Dataset):
             self,
             samples: Dict[str,List[str]],
             labels: Any = None,
-            cache_images: bool = False
+            cache_images: bool = False,
         ):
         """
         Generate a Torch-style Dataset from a list of samples and list of labels
@@ -70,7 +84,7 @@ class NiftiDataset(Dataset):
         samples, with each label being the supervised label of the corresponding
         sample
         :param cache_images: If True, nibabel will be allowed to cache images in
-        memory.  Defaults to False (images will be read from disk each time they
+        memory.  Defaults to False (images will be read from disk each time the
         are requested).
         """
         super(NiftiDataset,self).__init__()
