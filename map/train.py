@@ -263,6 +263,8 @@ if __name__ == '__main__':
     parser = _get_parser()
     args = parser.parse_args()
 
+    if not args.silent:
+        print("Fetching training data ...")
     train_dict = get_sample_dict(
         datapath = args.datapath,
         dataset='train'
@@ -277,6 +279,8 @@ if __name__ == '__main__':
         scale_inputs = args.scale_inputs
     )
 
+    if not args.silent:
+        print("Fetching test data ...")
     test_dict = get_sample_dict(
         datapath = args.datapath,
         dataset = 'test'
@@ -292,6 +296,8 @@ if __name__ == '__main__':
         cache_images = True
     )
 
+    if not args.silent:
+        print("Initializing model ...")
     model = MAPnet(
         input_shape = train_ds.image_shape,
         n_conv_layers = args.conv_layers,
@@ -313,6 +319,6 @@ if __name__ == '__main__':
         epochs = args.epochs,
         update_freq = args.update_freq,
         savepath = args.savepath,
-        savefreq = args.savefreq,
+        savefreq = args.save_freq,
         optimizer = lambda x: torch.optim.Adam(x.parameters(),lr=args.lr)
     )
