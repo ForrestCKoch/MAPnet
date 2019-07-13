@@ -99,7 +99,7 @@ class MAPnet(nn.Module):
 
     def forward(self,x): 
         for conv in self.conv_layers:
-            x = F.relu(conv(x))
+            x = F.sigmoid(conv(x))
         x = x.view(-1,self.fc_input_size)
         x = self.d1(x)
         x = F.relu(self.fc1(x))
