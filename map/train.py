@@ -65,9 +65,9 @@ def train(
     if loss_func is None:
         loss_func = torch.nn.MSELoss()
     if optimizer is None:
-        optimizer = torch.optim.Adam
+        optimizer = lambda x: torch.optim.Adam(x.parameters(),lr=0.000001)
 
-    model_optimizer = optimizer(model.parameters(),lr=0.00001)
+    model_optimizer = optimizer(model)
     model_scheduler = scheduler(model) if scheduler is not None else scheduler
 
     save_folder = os.path.join(savepath,datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))    
@@ -129,36 +129,42 @@ def _get_parser():
     parser.add_argument(
         "--datapath",
         type = str,
+        metavar = '[str]',
         default = DATAPATH,
         help = "path to data folder"
     )
     parser.add_argument(
         "--conv-layers",
         type = int,
+        metavar = '[int]',
         default = CONV_LAYERS,
         help = "number of Conv3d layers"
     )
     parser.add_argument(
         "--kernel-size",
         type = int,
+        metavar = '[int]',
         default = KERNEL_SIZE,
         help = "kernel size of each filter"
     )
     parser.add_argument(
         "--dilation",
         type = int,
+        metavar = '[int]',
         default = DILATION,
         help = "dilation factor for each filter"
     )
     parser.add_argument(
         "--padding",
         type = int,
+        metavar = '[int]',
         default = PADDING,
         help = "zero padding to be used in Conv3d layers"
     )
     parser.add_argument(
         "--stride",
         type = int,
+        metavar = '[int]',
         default = STRIDE,
         help = "stride between filter applications"
     )
@@ -166,36 +172,42 @@ def _get_parser():
         "--filters",
         nargs = '+',
         type = int,
+        metavar = 'int',
         default = [4,4,4],
         help = "filters to apply to each channel -- one entry per layer"
     )
     parser.add_argument(
         "--batch-size",
         type = int,
+        metavar = '[int]',
         default = 32,
         help = "number of samples per batch"
     )
     parser.add_argument(
         "--epochs",
         type = int,
+        metavar = '[int]',
         default = EPOCHS,
         help = "number of epochs to train over"
     )
     parser.add_argument(
         "--update-freq",
         type = int,
+        metavar = '[int]',
         default = UPDATE_FREQ,
         help = "how often (in epochs) to asses test set accuracy"
     )
     parser.add_argument(
-        "--learning-rate",
+        "--lr",
         type = float,
+        metavar = '[float]',
         default = LEARNING_RATE,
         help = "learning rate paramater"
     )
     parser.add_argument(
         "--workers",
         type = int,
+        metavar = '[int]',
         default = WORKERS,
         help = "number of workers in DataLoader"
     )
@@ -207,12 +219,14 @@ def _get_parser():
     parser.add_argument(
         "--savepath",
         type = str,
+        metavar = '[str]',
         default = SAVEPATH,
         help = "folder where model checkpoints should be saved -- if None model will not be saved "
     )
     parser.add_argument(
         "--save-freq",
         type = str,
+        metavar = '[str]',
         default = SAVE_FREQ,
         help = "how often model checkpoints should be saved (in epochs) "
     )
@@ -224,14 +238,22 @@ def _get_parser():
 
     # not implemented
     parser.add_argument(
+        "--silent",
+        action = "store_true",
+        #help = "set flag for quiet training"
+        help = "NOT IMPLEMENTED"
+    )
+    parser.add_argument(
         "--subpooling",
         action="store_true",
-        help = "set flag to use subpooling between Conv3d layers"
+        #help = "set flag to use subpooling between Conv3d layers"
+        help = "NOT IMPLEMENTED"
     )
     parser.add_argument(
         "--encode-age",
         action="store_true",
-        help = "set flag to encode age in a binary vector"
+        #help = "set flag to encode age in a binary vector"
+        help = "NOT IMPLEMENTED"
     )
     
 
@@ -258,16 +280,16 @@ if __name__ == '__main__':
     test_dict = get_sample_dict(
         datapath = args.datapath,
         dataset = 'test'
-    )
+        )
     test_ages = get_sample_ages(
         ids = test_dict.keys(),
-        paths_to_csv = os.path.join(args.datapath,'subject_info.csv')
+        path_to_csv = os.path.join(args.datapath,'subject_info.csv')
     )
     test_ds = NiftiDataset(
         samples = test_dict,
         labels = test_ages,
-        scale_inputs=args.scale_inputs,
-        cache_images=True
+        scale_inputs = args.scale_inputs,
+        cache_images = True
     )
 
     model = MAPnet(
@@ -278,7 +300,7 @@ if __name__ == '__main__':
         kernel = args.kernel_size,
         stride = args.stride,
         filters = args.filters,
-        input_channels=train_ds.images_per_subject
+        input_channels = train_ds.images_per_subject
     )
 
     train(
@@ -291,5 +313,6 @@ if __name__ == '__main__':
         epochs = args.epochs,
         update_freq = args.update_freq,
         savepath = args.savepath,
-        savefreq = args.savefreq
+        savefreq = args.savefreq,
+        optimizer = lambda x: torch.optim.Adam(x.parameters(),lr=args.lr)
     )

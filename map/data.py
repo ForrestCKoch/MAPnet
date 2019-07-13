@@ -6,8 +6,6 @@ from torch.utils.data import Dataset
 import numpy as np
 import nibabel as nib
 
-from sklearn.preprocessing import StandardScaler
-
 
 def get_sample_dict(
         datapath: str,
