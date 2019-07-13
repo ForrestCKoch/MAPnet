@@ -73,7 +73,7 @@ def scale_image(img: np.ndarray)->np.ndarray:
     :param img: img to be scaled
     """
     mn = np.min(img)
-    mx = np.mx(img)
+    mx = np.max(img)
     return ((img-mn)/(-mn+mx))*(img != 0)
     
 

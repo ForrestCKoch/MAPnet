@@ -6,7 +6,7 @@ import numpy as np
 
 import argparse
 import os
-import datetime
+from datetime import datetime
 
 from defaults import *
 from data import *
