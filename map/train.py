@@ -1,12 +1,14 @@
 from typing import Any, Optional, Callable
-from tqdm import tqdm
-import torch
-from torch.utils.data import DataLoader
-import numpy as np
-
 import argparse
 import os
 from datetime import datetime
+
+import numpy as np
+import torch
+from torch.utils.data import DataLoader
+from torchsummary import summary
+from tqdm import tqdm
+
 
 from defaults import *
 from data import *
@@ -54,7 +56,11 @@ def train(
     test_data_loader = DataLoader(test, num_workers=num_workers,
                     pin_memory=cuda, batch_size=batch_size,
                     shuffle=True)
-    desc_genr = lambda x,y,z: 'Epoch: {} Test Loss: {:.2f} Train Loss: {:.2f}'.format(x,y,z)
+    desc_genr = lambda x,y,z: 'Epoch: {} Test Loss: {} Train Loss: {}'.format(
+        x,
+        np.format_float_scientific(y,precision=3),
+        np.format_float_scientific(z,precision=3)
+    )
     test_loss = 0.0
 
     if cuda:
@@ -292,7 +298,7 @@ if __name__ == '__main__':
     )
     test_ds = NiftiDataset(
         samples = test_dict,
-        labels = test_ages,
+        labels = test_ages/100, # divide by 100 for faster learning!
         scale_inputs = args.scale_inputs,
         cache_images = True
     )
@@ -309,6 +315,14 @@ if __name__ == '__main__':
         filters = args.filters,
         input_channels = train_ds.images_per_subject
     )
+    # print out summary of model
+    if not args.silent:
+        summary(
+            model,
+            input_size = np.concatenate(
+                [train_ds.images_per_subject],train_ds.image_shape
+            )
+        )    
 
     train(
         train_ds,

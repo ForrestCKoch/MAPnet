@@ -3,5 +3,6 @@ sklearn
 numpy
 pytorch
 torchvision
+torchsummary
 tqdm
 nibabel
