@@ -241,13 +241,34 @@ if __name__ == '__main__':
     parser = _get_parser()
     args = parser.parse_args()
 
-    train_dict = get_sample_dict(args.datapath,dataset='train')
-    train_ages = get_sample_ages(train_dict.keys(),os.path.join(args.datapath,'subject_info.csv'))
-    train_ds = NiftiDataset(train_dict,train_ages,scale_inputs=args.scale_inputs)
+    train_dict = get_sample_dict(
+        datapath = args.datapath,
+        dataset='train'
+    )
+    train_ages = get_sample_ages(
+        ids = train_dict.keys(),
+        path_to_csv = os.path.join(args.datapath,'subject_info.csv')
+    )
+    train_ds = NiftiDataset(
+        samples = train_dict,
+        labels = train_ages/100, # divide by 100 for faster learning!
+        scale_inputs = args.scale_inputs
+    )
 
-    test_dict = get_sample_dict(args.datapath,dataset='test')
-    test_ages = get_sample_ages(test_dict.keys(),os.path.join(args.datapath,'subject_info.csv'))
-    test_ds = NiftiDataset(test_dict,test_ages,scale_inputs=args.scale_inputs,cache_images=True)
+    test_dict = get_sample_dict(
+        datapath = args.datapath,
+        dataset = 'test'
+    )
+    test_ages = get_sample_ages(
+        ids = test_dict.keys(),
+        paths_to_csv = os.path.join(args.datapath,'subject_info.csv')
+    )
+    test_ds = NiftiDataset(
+        samples = test_dict,
+        labels = test_ages,
+        scale_inputs=args.scale_inputs,
+        cache_images=True
+    )
 
     model = MAPnet(
         input_shape = train_ds.image_shape,
