@@ -319,6 +319,6 @@ if __name__ == '__main__':
         epochs = args.epochs,
         update_freq = args.update_freq,
         savepath = args.savepath,
-        savefreq = args.save_freq,
+        save_freq = args.save_freq,
         optimizer = lambda x: torch.optim.Adam(x.parameters(),lr=args.lr)
     )
