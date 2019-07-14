@@ -297,6 +297,9 @@ if __name__ == '__main__':
     parser = _get_parser()
     args = parser.parse_args()
 
+    ###########################################################################
+    # Loading Training Data
+    ###########################################################################
     if not args.silent:
         print("Fetching training data ...")
     train_dict = get_sample_dict(
@@ -313,6 +316,9 @@ if __name__ == '__main__':
         scale_inputs = args.scale_inputs
     )
 
+    ###########################################################################
+    # Loading Testing Data
+    ###########################################################################
     if not args.silent:
         print("Fetching test data ...")
     test_dict = get_sample_dict(
@@ -330,6 +336,9 @@ if __name__ == '__main__':
         cache_images = True
     )
 
+    ###########################################################################
+    # Initializing Model
+    ###########################################################################
     if not args.silent:
         print("Initializing model ...")
     model = MAPnet(
@@ -344,10 +353,16 @@ if __name__ == '__main__':
         conv_actv = [actv_funcs[x] for x in args.conv_actv],
         fc_actv = [actv_funcs[x] for x in args.fc_actv]
     )
-    # print out summary of model
+    ###########################################################################
+    # Weight Initializaiton
+    ###########################################################################
     model = model.cuda() if args.cuda else model
     fn = winit_funcs[args.weight_init]
     model.apply(lambda x: init_weights(x,fn))
+
+    ###########################################################################
+    # Print out model info ...
+    ###########################################################################
     if not args.silent:
         summary(
             model,
@@ -357,6 +372,9 @@ if __name__ == '__main__':
             device = "cuda" if args.cuda else "cpu"
         )    
 
+    ###########################################################################
+    # And finally, begin training
+    ###########################################################################
     train(
         train_ds,
         test_ds,
