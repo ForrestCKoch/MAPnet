@@ -2,6 +2,7 @@ from typing import Any, Optional, Callable, Tuple, List
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
+from torchsummary import summary
 
 import numpy as np
 
@@ -147,12 +148,14 @@ class MAPnet(nn.Module):
         layer_size = self.conv_layer_sizes[-1]
         self.fc_input_size  = int(np.prod(layer_size))*self.n_channels[-1]
 
+        """
         print("Conv3d sizes")
         print(self.conv_layer_sizes)
         print("Number of channels")
         print(self.n_channels)
         print("Output nodes of convolutions")
         print(self.fc_input_size)
+        """
 
         fc_layers = list()
 
@@ -176,3 +179,4 @@ class MAPnet(nn.Module):
             x = actv(fc(x))
 
         return x
+
