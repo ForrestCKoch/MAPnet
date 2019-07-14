@@ -18,8 +18,8 @@ image using convolutional neural networks.
 It can be used with `torch.utils.data.DataLoader` for multithreaded loading.
     * There are a few helper functions implemented in data.py that are intended
     to help with constructing the dataset.  They expect a folder structure of
-    data/
     ```
+    data/
     ├── subject_info.csv
     ├── train/
     │   ├── sub1/
