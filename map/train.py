@@ -316,12 +316,14 @@ if __name__ == '__main__':
         input_channels = train_ds.images_per_subject
     )
     # print out summary of model
+    model = model.cuda() if args.cuda else model
     if not args.silent:
         summary(
             model,
-            input_size = np.concatenate(
-                [train_ds.images_per_subject],train_ds.image_shape
-            )
+            input_size = tuple(np.concatenate(
+                [[train_ds.images_per_subject],np.array(train_ds.image_shape)]
+            )),
+            device = "cuda" if args.cuda else "cpu"
         )    
 
     train(
