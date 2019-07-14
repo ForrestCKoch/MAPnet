@@ -148,28 +148,32 @@ def _get_parser():
     parser.add_argument(
         "--kernel-size",
         type = int,
-        metavar = '[int]',
+        nargs = '+',
+        metavar = 'int',
         default = KERNEL_SIZE,
         help = "kernel size of each filter"
     )
     parser.add_argument(
         "--dilation",
         type = int,
-        metavar = '[int]',
+        nargs = '+',
+        metavar = 'int',
         default = DILATION,
         help = "dilation factor for each filter"
     )
     parser.add_argument(
         "--padding",
         type = int,
-        metavar = '[int]',
+        nargs = '+',
+        metavar = 'int',
         default = PADDING,
         help = "zero padding to be used in Conv3d layers"
     )
     parser.add_argument(
         "--stride",
         type = int,
-        metavar = '[int]',
+        nargs = '+',
+        metavar = 'int',
         default = STRIDE,
         help = "stride between filter applications"
     )
@@ -305,7 +309,7 @@ if __name__ == '__main__':
     )
     train_ds = NiftiDataset(
         samples = train_dict,
-        labels = train_ages/100, # divide by 100 for faster learning!
+        labels = train_ages/100, # divide by 100 for faster learning!?
         scale_inputs = args.scale_inputs
     )
 
@@ -321,7 +325,7 @@ if __name__ == '__main__':
     )
     test_ds = NiftiDataset(
         samples = test_dict,
-        labels = test_ages/100, # divide by 100 for faster learning!
+        labels = test_ages/100, # divide by 100 for faster learning!?
         scale_inputs = args.scale_inputs,
         cache_images = True
     )

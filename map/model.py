@@ -5,6 +5,8 @@ import torch.nn as nn
 
 import numpy as np
 
+from defaults import *
+
 
 winit_funcs = {
     'normal':nn.init.normal_,
@@ -52,12 +54,12 @@ class MAPnet(nn.Module):
     def __init__(
             self, 
             input_shape: Tuple[int,int,int],
-            n_conv_layers: int = 3,
-            padding: int = 2,
-            dilation: int = 1,
-            kernel: int = 5,
-            stride: int = 3,
-            filters: List[int] = [4,4,4],
+            n_conv_layers: int = CONV_LAYERS,
+            padding: List[int] = [PADDING],
+            dilation: List[int] = [DILATION],
+            kernel: List[int] = [KERNEL_SIZE],
+            stride: List[int] = [STRIDE],
+            filters: List[int] = FILTERS,
             input_channels: int = 1,
             conv_actv: List[Callable[[nn.Module],nn.Module]] = [F.relu],
             fc_actv: List[Callable[[nn.Module],nn.Module]] = [F.relu,F.tanh,F.relu]
@@ -85,32 +87,38 @@ class MAPnet(nn.Module):
             raise ValueError("Length of filters ({}) does not match n_conv_layers ({})".format(len(filters),n_conv_layers))
         elif not ((len(conv_actv) == 1) or (len(conv_actv) == n_conv_layers)):
             raise ValueError("conv_actv arguments has incorrect length")
+        elif not ((len(padding) == 1) or (len(padding) == n_conv_layers)):
+            raise ValueError("padding arguments has incorrect length")
+        elif not ((len(dilation) == 1) or (len(dilation) == n_conv_layers)):
+            raise ValueError("dilation arguments has incorrect length")
+        elif not ((len(kernel) == 1) or (len(kernel) == n_conv_layers)):
+            raise ValueError("kernel arguments has incorrect length")
+        elif not ((len(stride) == 1) or (len(stride) == n_conv_layers)):
+            raise ValueError("stride arguments has incorrect length")
         elif not ((len(fc_actv) == 1) or (len(fc_actv) == 3)):
             raise ValueError("conv_actv arguments has incorrect length")
         
         super(MAPnet,self).__init__()
 
-        # store arguments in a dictionary for loading/saving
-        self.arguments = {
-            'input_shape':input_shape,
-            'n_conv_layers':n_conv_layers,
-            'padding':padding,
-            'dilation':dilation,
-            'kernel':kernel,
-            'stride':stride,
-            'filters':filters,
-            'input_channels':input_channels,
-        } 
+        # Handle the case where only 1 number is supplied
+        if len(padding) == 1:
+            padding = np.repeat(padding,n_conv_layers)
+        if len(dilation) == 1:
+            dilation = np.repeat(dilation,n_conv_layers)
+        if len(kernel) == 1:
+            kernel = np.repeat(kernel,n_conv_layers)
+        if len(stride) == 1:
+            stride = np.repeat(stride,n_conv_layers)
 
         self.conv_layer_sizes = list([np.array(input_shape)])
         for i in range(0,n_conv_layers):
             self.conv_layer_sizes.append(
                 get_out_dims(
                     self.conv_layer_sizes[-1], # input dimensions    
-                    np.repeat(padding,3), # padding
-                    np.repeat(dilation,3), # dilation
-                    np.repeat(kernel,3), # kernel
-                    np.repeat(stride,3), # stride
+                    np.repeat(padding[i],3), # padding
+                    np.repeat(dilation[i],3), # dilation
+                    np.repeat(kernel[i],3), # kernel
+                    np.repeat(stride[i],3), # stride
                 )
             )
 
@@ -123,10 +131,10 @@ class MAPnet(nn.Module):
                 nn.Conv3d(
                     in_channels=self.n_channels[-2], 
                     out_channels=self.n_channels[-1], 
-                    kernel_size=kernel, 
-                    stride=stride, 
-                    padding=padding, 
-                    dilation=dilation, 
+                    kernel_size=kernel[i], 
+                    stride=stride[i], 
+                    padding=padding[i], 
+                    dilation=dilation[i], 
                     groups=self.n_channels[-2], 
                     bias=True, 
                     padding_mode='zeros'
