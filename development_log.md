@@ -130,3 +130,8 @@ Epoch: 2 Test Loss: 5.411e-03 Train Loss: 5.576e-03: 100%|███████�
 Epoch: 3 Test Loss: 5.359e-03 Train Loss: 5.574e-03: 100%|███████████████████████████████████████████| 218/218 [14:52<00:00,  3.37s/it
 ```
 
+### Thoughts moving forward
+* See if there are efficiency gains to be made to decrease training time
+* Implement subpooling to allow for more fine-grain convolutions and smaller FC
+* Weight initialization
+* Loss functions / age encoding
