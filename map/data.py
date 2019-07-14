@@ -46,7 +46,7 @@ def get_sample_ages(
             line = line.rstrip('\n')
             sid,age = line.split(',')
             id_to_age[sid] = float(age)
-    return np.array([id_to_age[i] for i in ids])
+    return np.array([id_to_age[i] for i in ids],dtype=np.float32)
     
 def encode_age(
         age: float,
@@ -60,7 +60,7 @@ def encode_age(
     :param age: age to be encoded
     :param bins: List of bin boundaries 
     """
-    return torch.from_numpy(np.array(bins <= age))
+    return torch.from_numpy(np.array(bins <= age,dtype=np.float32))
      
 
 def check_subject_folder(path):
@@ -133,12 +133,12 @@ class NiftiDataset(Dataset):
 
         if self.scale_inputs:
             img_array = np.concatenate(
-                    [[scale_image(img.get_fdata())] for img in indv],
+                    [[scale_image(img.get_fdata(dtype=np.float32))] for img in indv],
                     axis=0
             )
         else:
             img_array = np.concatenate(
-                    [[img.get_fdata()] for img in indv],
+                    [[img.get_fdata(dtype=np.float32)] for img in indv],
                     axis=0
             )
 

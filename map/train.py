@@ -50,12 +50,12 @@ def train(
     # Some preamble to get everything ready for training
     ###########################################################################
     train_data_loader = DataLoader(train, num_workers=num_workers,
-                    pin_memory=cuda, batch_size=batch_size,
-                    shuffle=True)
+            pin_memory=cuda, batch_size=batch_size,
+            shuffle=True)
 
     test_data_loader = DataLoader(test, num_workers=num_workers,
-                    pin_memory=cuda, batch_size=batch_size,
-                    shuffle=True)
+            pin_memory=cuda, batch_size=batch_size,
+            shuffle=True)
     desc_genr = lambda x,y,z: 'Epoch: {} Test Loss: {} Train Loss: {}'.format(
         x,
         np.format_float_scientific(y,precision=3),
@@ -64,7 +64,7 @@ def train(
     test_loss = 0.0
 
     if cuda:
-        model = model.cuda()
+        model = model.cuda().float()
     else: 
         model = model.float()
 
@@ -76,8 +76,11 @@ def train(
     model_optimizer = optimizer(model)
     model_scheduler = scheduler(model) if scheduler is not None else scheduler
 
-    save_folder = os.path.join(savepath,datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))    
-    os.makedirs(save_folder)
+    if savepath is not None:
+        save_folder = os.path.join(savepath,datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))    
+        os.makedirs(save_folder)
+    else:
+        save_folder = None
 
     ###########################################################################
     # Start Training Epoch
@@ -95,11 +98,9 @@ def train(
         for index, batch in enumerate(data_iterator):
             x,label = batch
             if cuda:
-                x = x.cuda().float()
-                label = label.cuda().float()
-            else:
-                x = x.float()
-                label = label.float()
+                x = x.cuda()
+                label = label.cuda()
+
             y = model(x)
             loss = loss_func(y,label.view(-1,1))
             loss_value = float(loss.item())
@@ -117,17 +118,14 @@ def train(
             for index, batch in enumerate(test_data_loader):
                 x,label = batch
                 if cuda:
-                    x = x.cuda().float()
-                    label = label.cuda().float()
-                else:
-                    x = x.float()
-                    label = label.float()
+                    x = x.cuda()
+                    label = label.cuda()
                 y = model(x)
                 loss = loss_func(y,label.view(-1,1))
                 total_loss += float(loss.item())
             test_loss = total_loss/(index+1)
     
-        if (i+1)%save_freq==0:
+        if (i+1)%save_freq==0 and savepath is not None:
             torch.save(model, os.path.join(save_folder,'epoch-{}.dat'.format(i+1)))
             
 
