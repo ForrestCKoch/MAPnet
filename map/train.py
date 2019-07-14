@@ -270,6 +270,13 @@ def _get_parser():
         choices = actv_funcs.keys(),
         help = "activation functions to be used in convolutional layers -- must be 1 or n_conv_layers [{}]".format(', '.join(actv_funcs.keys()))
     )
+    parser.add_argument(
+        "--debug-size",
+        type = int,
+        nargs = 4, 
+        help = "Print out the expected architecture.  4 Integers should be supplied to this argument [channels, dimx, dimy, dimz].  Program execution will terminate afterwards"
+    )
+
     # not implemented
     parser.add_argument(
         "--silent",
@@ -292,10 +299,63 @@ def _get_parser():
     
 
     return parser
+
+def print_network_size(args:argparse.ArgumentParser):
+    padding = args.padding
+    dilation = args.dilation
+    kernel = args.kernel_size
+    stride = args.stride
+    conv_layers = args.conv_layers
+    filters = args.filters
+    t,x,y,z = args.debug_size
+
+    if len(padding) == 1:
+        padding = np.repeat(padding,conv_layers)
+    if len(dilation) == 1:
+        dilation = np.repeat(dilation,conv_layers)
+    if len(kernel) == 1:
+        kernel = np.repeat(kernel,conv_layers)
+    if len(stride) == 1:
+        stride = np.repeat(stride,conv_layers)
+
+    conv_layer_sizes = list([np.array([x,y,z])])
+    n_channels = list([t])
+    for i in range(0,conv_layers):
+        dims = get_out_dims(
+            conv_layer_sizes[-1],
+            np.repeat(padding[i],3),
+            np.repeat(dilation[i],3),
+            np.repeat(kernel[i],3),
+            np.repeat(stride[i],3)
+        ).astype(np.int16)
+        idims = conv_layer_sizes[-1]
+        conv_layer_sizes.append(dims)
+        n_channels.append(n_channels[-1]*filters[i])
+
+        print("Conv Layer {}: ({},{},{},{}) -> ({},{},{},{})".format(
+            i,
+            n_channels[-2],
+            idims[0],
+            idims[1],
+            idims[2],
+            n_channels[-1],
+            dims[0],
+            dims[1],
+            dims[2]
+        ))
+
+    fc = int(np.prod(conv_layer_sizes[-1]))*n_channels[-1]
+    print("FC layers: {} -> {} -> 100 -> 1".format(fc,int(fc/2)))
+
+
             
 if __name__ == '__main__': 
     parser = _get_parser()
     args = parser.parse_args()
+
+    if args.debug_size:
+        print_network_size(args)
+        exit()
 
     ###########################################################################
     # Loading Training Data
