@@ -19,6 +19,7 @@ It can be used with `torch.utils.data.DataLoader` for multithreaded loading.
     * There are a few helper functions implemented in data.py that are intended
     to help with constructing the dataset.  They expect a folder structure of
     data/
+    ```
     ├── subject_info.csv
     ├── train/
     │   ├── sub1/
@@ -32,6 +33,7 @@ It can be used with `torch.utils.data.DataLoader` for multithreaded loading.
     │   │   └── subM_imageN.nii.gz
     ├── test/
     │   ├── ...
+    ```
 * `MAPnet` (`torch.nn.Module`) -- A very general/flexible basic Conv3d network.
     * Caller can specify number of Conv3d layers and their parameters
     * The helper function `get_out_dims(...)` can be used to calculate the
