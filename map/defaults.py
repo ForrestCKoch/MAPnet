@@ -17,3 +17,5 @@ SAVEPATH = None
 SAVE_FREQ = 1
 CUDA = False
 WEIGHT_INIT = 'kaiming-uniform'
+CONV_ACTV_ARG = ['relu']
+FC_ACTV_ARG = ['relu','tanh','relu']

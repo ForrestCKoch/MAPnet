@@ -2,10 +2,11 @@ from typing import Any, Optional, Callable, Tuple, List
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
+
 import numpy as np
 
 
-weight_init_function_dict = {
+winit_funcs = {
     'normal':nn.init.normal_,
     'uniform':nn.init.uniform_,
     'xavier-normal':nn.init.xavier_normal_,
@@ -15,6 +16,16 @@ weight_init_function_dict = {
     'leaky-kaiming-normal':nn.init.kaiming_normal_,
     'leaky-kaiming-uniform':nn.init.kaiming_uniform_
 }
+
+actv_funcs = {
+    'sigmoid':torch.sigmoid,
+    'tanh':torch.tanh,
+    'relu':F.relu,
+    'elu':F.elu,
+    'leaky-relu':F.leaky_relu,
+    'rrelu':F.rrelu
+}
+
 def init_weights(m, fn):
     if hasattr(m,'weight'):
         fn(m.weight)
@@ -48,6 +59,8 @@ class MAPnet(nn.Module):
             stride: int = 3,
             filters: List[int] = [4,4,4],
             input_channels: int = 1,
+            conv_actv: List[Callable[[nn.Module],nn.Module]] = [F.relu],
+            fc_actv: List[Callable[[nn.Module],nn.Module]] = [F.relu,F.tanh,F.relu]
         ):
         """
         Initialize an instance of MAPnet.
@@ -59,11 +72,21 @@ class MAPnet(nn.Module):
         :param stride: `stride` parameter for `nn.Conv3d`.
         :param filters: List of filters per layer.
         :param input_channels: Number of input channels to the model. 
+        :param conv_actv: List of of activation functions to be used in 
+        convolutional layers.  If only one element is supplied, then this
+        activation function will be used for all layers.
+        :param fc_actv: List of activation functions to be used in
+        fully conneced layers.  If only one element is supplied, then this
+        activation function will be used for all layers.
         """
         if len(input_shape) != 3:
             raise ValueError("Expected input_shape to have 3 dimensions not {}".format(len(input_shape)))
         elif len(filters) != n_conv_layers:
             raise ValueError("Length of filters ({}) does not match n_conv_layers ({})".format(len(filters),n_conv_layers))
+        elif not ((len(conv_actv) == 1) or (len(conv_actv) == n_conv_layers)):
+            raise ValueError("conv_actv arguments has incorrect length")
+        elif not ((len(fc_actv) == 1) or (len(fc_actv) == 3)):
+            raise ValueError("conv_actv arguments has incorrect length")
         
         super(MAPnet,self).__init__()
 
@@ -92,6 +115,7 @@ class MAPnet(nn.Module):
             )
 
         conv_layers = list()
+        self.conv_actv = list()
         self.n_channels=list([input_channels])
         for i in range(0,n_conv_layers):
             self.n_channels.append(self.n_channels[-1] * filters[i])
@@ -108,30 +132,39 @@ class MAPnet(nn.Module):
                     padding_mode='zeros'
                 )
             )
+            self.conv_actv.append(conv_actv[i] if len(conv_actv) > 1 else conv_actv[0])
         self.conv_layers = nn.ModuleList(conv_layers)
         
         # calculate the size of flattening out the last conv layer
         layer_size = self.conv_layer_sizes[-1]
         self.fc_input_size  = int(np.prod(layer_size))*self.n_channels[-1]
+
         print("Conv3d sizes")
         print(self.conv_layer_sizes)
         print("Number of channels")
         print(self.n_channels)
         print("Output nodes of convolutions")
         print(self.fc_input_size)
-        self.fc1 = nn.Linear(self.fc_input_size,int(self.fc_input_size/2)) 
-        self.fc2 = nn.Linear(int(self.fc_input_size/2),100) 
-        self.fc3 = nn.Linear(100,1)
+
+        fc_layers = list()
+
+        fc_layers.append(nn.Linear(self.fc_input_size,int(self.fc_input_size/2)))
+        fc_layers.append(nn.Linear(int(self.fc_input_size/2),100))
+        fc_layers.append(nn.Linear(100,1))
+        self.fc_layers = nn.ModuleList(fc_layers)
+        self.fc_actv = fc_actv * 3 if len(fc_actv) == 1 else fc_actv
+        
         self.d1 = nn.Dropout()
-        self.d2 = nn.Dropout()
 
     def forward(self,x): 
-        for conv in self.conv_layers:
-            x = F.relu(conv(x))
+        for i,conv in enumerate(self.conv_layers):
+            actv = self.conv_actv[i]
+            x = actv(conv(x))
+
         x = x.view(-1,self.fc_input_size)
         x = self.d1(x)
-        x = F.relu(self.fc1(x))
-        #x = self.d2(x)
-        x = torch.tanh(self.fc2(x))
-        x = F.relu(self.fc3(x))
+        for i,fc in enumerate(self.fc_layers):
+            actv = self.fc_actv[i]
+            x = actv(fc(x))
+
         return x

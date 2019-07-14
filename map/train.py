@@ -245,10 +245,27 @@ def _get_parser():
         type = str,
         metavar = '[str]',
         default = WEIGHT_INIT,
-        choices = weight_init_function_dict.keys(),
-        help = "weight initialization method"
+        choices = winit_funcs.keys(),
+        help = "weight initialization method [{}]".format(', '.join(winit_funcs.keys()))
     )
-
+    parser.add_argument(
+        "--conv-actv",
+        type = str,
+        nargs = '+',
+        metavar = 'str',
+        default = CONV_ACTV_ARG,
+        choices = actv_funcs.keys(),
+        help = "activation functions to be used in convolutional layers -- must be 1 or n_conv_layers [{}]".format(', '.join(actv_funcs.keys()))
+    )
+    parser.add_argument(
+        "--fc-actv",
+        type = str,
+        nargs = '+',
+        metavar = 'str',
+        default = CONV_ACTV_ARG,
+        choices = actv_funcs.keys(),
+        help = "activation functions to be used in convolutional layers -- must be 1 or n_conv_layers [{}]".format(', '.join(actv_funcs.keys()))
+    )
     # not implemented
     parser.add_argument(
         "--silent",
@@ -319,11 +336,13 @@ if __name__ == '__main__':
         kernel = args.kernel_size,
         stride = args.stride,
         filters = args.filters,
-        input_channels = train_ds.images_per_subject
+        input_channels = train_ds.images_per_subject,
+        conv_actv = [actv_funcs[x] for x in args.conv_actv],
+        fc_actv = [actv_funcs[x] for x in args.fc_actv]
     )
     # print out summary of model
     model = model.cuda() if args.cuda else model
-    fn = weight_init_function_dict[args.weight_init]
+    fn = winit_funcs[args.weight_init]
     model.apply(lambda x: init_weights(x,fn))
     if not args.silent:
         summary(
