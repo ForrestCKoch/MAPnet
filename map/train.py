@@ -240,6 +240,14 @@ def _get_parser():
         action="store_true",
         help = "set flag to scale input images"
     )
+    parser.add_argument(
+        "--weight-init",
+        type = str,
+        metavar = '[str]',
+        default = WEIGHT_INIT,
+        choices = weight_init_function_dict.keys(),
+        help = "weight initialization method"
+    )
 
     # not implemented
     parser.add_argument(
@@ -315,6 +323,8 @@ if __name__ == '__main__':
     )
     # print out summary of model
     model = model.cuda() if args.cuda else model
+    fn = weight_init_function_dict[args.weight_init]
+    model.apply(lambda x: init_weights(x,fn))
     if not args.silent:
         summary(
             model,

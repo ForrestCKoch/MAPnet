@@ -16,3 +16,4 @@ EPOCHS = 20
 SAVEPATH = None
 SAVE_FREQ = 1
 CUDA = False
+WEIGHT_INIT = 'kaiming-uniform'

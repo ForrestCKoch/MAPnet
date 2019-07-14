@@ -4,6 +4,21 @@ import torch.nn.functional as F
 import torch.nn as nn
 import numpy as np
 
+
+weight_init_function_dict = {
+    'normal':nn.init.normal_,
+    'uniform':nn.init.uniform_,
+    'xavier-normal':nn.init.xavier_normal_,
+    'xavier-uniform':nn.init.xavier_uniform_,
+    'kaiming-normal':lambda x :nn.init.kaiming_normal_(x,nonlinearity='relu'),
+    'kaiming-uniform':lambda x :nn.init.kaiming_uniform_(x,nonlinearity='relu'),
+    'leaky-kaiming-normal':nn.init.kaiming_normal_,
+    'leaky-kaiming-uniform':nn.init.kaiming_uniform_
+}
+def init_weights(m, fn):
+    if hasattr(m,'weight'):
+        fn(m.weight)
+
 def get_out_dims(
         inputs: np.ndarray,
         padding: np.ndarray,
@@ -112,7 +127,7 @@ class MAPnet(nn.Module):
 
     def forward(self,x): 
         for conv in self.conv_layers:
-            x = F.sigmoid(conv(x))
+            x = F.relu(conv(x))
         x = x.view(-1,self.fc_input_size)
         x = self.d1(x)
         x = F.relu(self.fc1(x))
