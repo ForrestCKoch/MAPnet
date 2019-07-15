@@ -54,7 +54,7 @@ I will encorporate more images and do a proper test/train/validate split.
 * For model development, I am currently using a DWI dataset from UKBB data
 consisting of 17915 subjects.
     * Each subject contains four images which are DTI derivatives -- FA, MD, AD
-    RD (refer to [link](http://www.diffusion-imaging.com/2013/01/relation-between-neural-microstructure.html)
+    RD (refer to [link](http://www.diffusion-imaging.com/2013/01/relation-between-neural-microstructure.html))
     for description). Each image is used as a separate channel.
     * Each input image is 104x104x72
     * Data is divided into Train (13915), Test (2000), and Validate (2000) sets.
@@ -129,7 +129,7 @@ The model quickly converges on predicted the mean:
 Epoch: 0 Test Loss: 0.e+00 Train Loss: 9.272e-02: 100%|██████████████████████████████████████████████| 218/218 [13:58<00:00,  3.18s/it]
 Epoch: 1 Test Loss: 5.409e-03 Train Loss: 5.577e-03: 100%|███████████████████████████████████████████| 218/218 [14:12<00:00,  3.14s/it]
 Epoch: 2 Test Loss: 5.411e-03 Train Loss: 5.576e-03: 100%|███████████████████████████████████████████| 218/218 [14:06<00:00,  3.35s/it]
-Epoch: 3 Test Loss: 5.359e-03 Train Loss: 5.574e-03: 100%|███████████████████████████████████████████| 218/218 [14:52<00:00,  3.37s/it
+Epoch: 3 Test Loss: 5.359e-03 Train Loss: 5.574e-03: 100%|███████████████████████████████████████████| 218/218 [14:52<00:00,  3.37s/it]
 ```
 
 ### Thoughts moving forward
@@ -137,3 +137,65 @@ Epoch: 3 Test Loss: 5.359e-03 Train Loss: 5.574e-03: 100%|███████�
 * Implement subpooling to allow for more fine-grain convolutions and smaller FC
 * Weight initialization
 * Loss functions / age encoding
+
+## 15/07/19
+
+### Model Experiment:
+
+Last night I had the idea that instead of adding pooling (max or average),
+I could instead just use strided convolutions.  A quick google search showed that
+this is in fact done 
+(see this stackoverflow [discussion](https://stats.stackexchange.com/questions/387482/pooling-vs-stride-for-downsampling))
+
+So, this morning I started training a model with the following call:
+```
+python3.6 map/train.py \
+    --datapath dwi_data/ \
+    --savepath models/ \
+    --batch-size 32 \
+    --epochs 50 \
+    --lr 0.0001 \
+    --workers 32 \
+    --scale-inputs \
+    --cuda \
+    --stride 1 4 1 3 1 4 3\
+    --padding 2 2 1 1 2 1 1\
+    --conv-layers 7 \
+    --filters 4 1 4 1 4 1 2\
+    --kernel-size 4 4 3 3 4 4 2 \
+    --conv-actv elu \
+    --fc-actv elu
+```
+The parameter sizes were somewhat lazily chosen last night in an attempt to
+preserve layer size inbetween non-striding convolutions.  I will try to
+implement a "smart" padding method to make this easier to achieve ...
+
+Model Summary:
+```
+----------------------------------------------------------------
+        Layer (type)               Output Shape         Param #
+================================================================
+            Conv3d-1     [-1, 16, 105, 105, 73]           1,040
+            Conv3d-2       [-1, 16, 27, 27, 19]           1,040
+            Conv3d-3       [-1, 64, 27, 27, 19]           1,792
+            Conv3d-4          [-1, 64, 9, 9, 7]           1,792
+            Conv3d-5       [-1, 256, 10, 10, 8]          16,640
+            Conv3d-6         [-1, 256, 3, 3, 2]          16,640
+            Conv3d-7         [-1, 512, 2, 2, 1]           4,608
+           Dropout-8                 [-1, 2048]               0
+            Linear-9                 [-1, 1024]       2,098,176
+           Linear-10                  [-1, 100]         102,500
+           Linear-11                    [-1, 1]             101
+================================================================
+Total params: 2,244,329
+Trainable params: 2,244,329
+Non-trainable params: 0
+```
+
+Thirty epochs in, it appears to be making some slight improvements over simply
+predicting the mean.
+```
+Epoch: 30 Test Loss: 4.853e-03 Train Loss: 4.802e-03: 100%|██████████████████████████████████████████| 435/435 [11:24<00:00,  1.49s/it]
+```
+
+Note that if it were predicting the mean, loss would be around 5.6e-03.
