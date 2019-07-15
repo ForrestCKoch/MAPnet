@@ -28,7 +28,8 @@ def train(
         cuda: Optional[bool] = CUDA, 
         loss_func: Optional[Callable[[float,float],None]] = None, 
         optimizer: Optional[Callable[[torch.nn.Module],torch.optim.Optimizer]]=None, 
-        scheduler: Optional[Callable[[int, torch.nn.Module],None]] = None
+        scheduler: Optional[Callable[[int, torch.nn.Module],None]] = None,
+        silent: Optional[bool] = False
     ) -> None:
     """
     Train the provided MAPnet model.
@@ -101,7 +102,7 @@ def train(
 
         if model_scheduler is not None:
             model_scheduler.step()
-        data_iterator = tqdm(train_data_loader,desc=desc_genr(i,test_loss,0))
+        data_iterator = tqdm(train_data_loader,desc=desc_genr(i,test_loss,0),disable=silent)
 
         train_loss = list()
         #######################################################################
@@ -299,14 +300,14 @@ def _get_parser():
         default = None,
         help = "Specify a saved model to load and train.  Other arguments relating to model paremeters (padding, kernel-size, etc..) will be ignored.  Training parameters (learning rate, update frequency, etc ...) may still be specified."
     )
-
-    # not implemented
     parser.add_argument(
         "--silent",
         action = "store_true",
         #help = "set flag for quiet training"
         help = "NOT IMPLEMENTED"
     )
+
+    # not implemented
     parser.add_argument(
         "--subpooling",
         action="store_true",
