@@ -15,7 +15,6 @@ from data import *
 from model import *
 from train import *
 
-# Use of typing inspired by https://github.com/vlukiyanov/pt-sdae
 def train(
         train: torch.utils.data.Dataset, 
         test: torch.utils.data.Dataset, 
@@ -32,7 +31,20 @@ def train(
         scheduler: Optional[Callable[[int, torch.nn.Module],None]] = None
     ) -> None:
     """
-    Train the provided MAPnet
+    Train the provided MAPnet model.
+
+    Note: 
+    If `savepath` is specified, models will be saved in a new folder
+    named according to the date and time it is run.  If mutliple instances
+    are being run in parallel, each instance should have a different 
+    savepath to avoid overlap.
+
+    Furthermore, if the supplied model has been pre-trained, the naming
+    scheme will not reflect this.  The user should take care to make sure
+    this information is not lost.  I suggest setting savepath to the 
+    datetime folder created in the previous training stage.  This way
+    the model will be grouped with its 'ancestor' models.
+
     :param train: Dataset object containing the training data.
     :param test: Dataset object containing the test data.
     :param model: `torch.nn.Module` model to be trained.
@@ -281,6 +293,12 @@ def _get_parser():
         nargs = 4, 
         help = "Print out the expected architecture.  4 Integers should be supplied to this argument [channels, dimx, dimy, dimz].  Program execution will terminate afterwards"
     )
+    parser.add_argument(
+        "--load-model",
+        type = str,
+        default = None,
+        help = "Specify a saved model to load and train.  Other arguments relating to model paremeters (padding, kernel-size, etc..) will be ignored.  Training parameters (learning rate, update frequency, etc ...) may still be specified."
+    )
 
     # not implemented
     parser.add_argument(
@@ -404,27 +422,39 @@ if __name__ == '__main__':
     ###########################################################################
     # Initializing Model
     ###########################################################################
-    if not args.silent:
-        print("Initializing model ...")
-    model = MAPnet(
-        input_shape = train_ds.image_shape,
-        n_conv_layers = args.conv_layers,
-        padding = args.padding,
-        dilation = args.dilation,
-        kernel = args.kernel_size,
-        stride = args.stride,
-        filters = args.filters,
-        input_channels = train_ds.images_per_subject,
-        conv_actv = [actv_funcs[x] for x in args.conv_actv],
-        fc_actv = [actv_funcs[x] for x in args.fc_actv],
-        even_padding = args.even_padding
-    )
+    if args.load_model is None:
+        if not args.silent:
+            print("Initializing model ...")
+        model = MAPnet(
+            input_shape = train_ds.image_shape,
+            n_conv_layers = args.conv_layers,
+            padding = args.padding,
+            dilation = args.dilation,
+            kernel = args.kernel_size,
+            stride = args.stride,
+            filters = args.filters,
+            input_channels = train_ds.images_per_subject,
+            conv_actv = [actv_funcs[x] for x in args.conv_actv],
+            fc_actv = [actv_funcs[x] for x in args.fc_actv],
+            even_padding = args.even_padding
+        )
+        ###########################################################################
+        # Weight Initializaiton
+        ###########################################################################
+        fn = winit_funcs[args.weight_init]
+        model.apply(lambda x: init_weights(x,fn))
+    else:
+        if not args.silent:
+            print("Loading model ...")
+        if not os.path.exists(args.load_model):
+            raise ValueError("Cannot load model -- {} does not exist".format(args.load_model))
+        model = torch.load(args.load_model)
+
+
     ###########################################################################
-    # Weight Initializaiton
+    # Move the model to GPU if cuda is requested
     ###########################################################################
     model = model.cuda() if args.cuda else model
-    fn = winit_funcs[args.weight_init]
-    model.apply(lambda x: init_weights(x,fn))
 
     ###########################################################################
     # Print out model info ...
