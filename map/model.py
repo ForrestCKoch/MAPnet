@@ -80,16 +80,16 @@ class MAPnet(nn.Module):
     def __init__(
             self, 
             input_shape: Tuple[int,int,int],
-            n_conv_layers: int = CONV_LAYERS,
-            padding: List[int] = [PADDING],
-            dilation: List[int] = [DILATION],
-            kernel: List[int] = [KERNEL_SIZE],
-            stride: List[int] = [STRIDE],
-            filters: List[int] = FILTERS,
-            input_channels: int = 1,
-            conv_actv: List[Callable[[nn.Module],nn.Module]] = [F.relu],
-            fc_actv: List[Callable[[nn.Module],nn.Module]] = [F.relu,F.tanh,F.relu],
-            even_padding: bool = False
+            n_conv_layers: Optional[int] = CONV_LAYERS,
+            padding: Optional[List[int]] = [PADDING],
+            dilation: Optional[List[int]] = [DILATION],
+            kernel: Optional[List[int]] = [KERNEL_SIZE],
+            stride: Optional[List[int]] = [STRIDE],
+            filters: Optional[List[int]] = FILTERS,
+            input_channels: Optional[int] = 1,
+            conv_actv: Optional[List[Callable[[nn.Module],nn.Module]]] = [F.relu],
+            fc_actv: Optional[List[Callable[[nn.Module],nn.Module]]] = [F.relu,F.tanh,F.relu],
+            even_padding: Optional[bool] = False
         ):
         """
         Initialize an instance of MAPnet.
