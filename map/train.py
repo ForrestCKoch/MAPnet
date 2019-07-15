@@ -271,6 +271,11 @@ def _get_parser():
         help = "activation functions to be used in convolutional layers -- must be 1 or n_conv_layers [{}]".format(', '.join(actv_funcs.keys()))
     )
     parser.add_argument(
+        "--even-padding",
+        action = "store_true",
+        help = "Calculate padding vectors to ensure even perfect overlap with kernel applications.  Layers with stride = 1 will have input dimensions preserved.  The '--padding' argument is ignored when this flag is set"
+    )
+    parser.add_argument(
         "--debug-size",
         type = int,
         nargs = 4, 
@@ -411,7 +416,8 @@ if __name__ == '__main__':
         filters = args.filters,
         input_channels = train_ds.images_per_subject,
         conv_actv = [actv_funcs[x] for x in args.conv_actv],
-        fc_actv = [actv_funcs[x] for x in args.fc_actv]
+        fc_actv = [actv_funcs[x] for x in args.fc_actv],
+        even_padding = args.even_padding
     )
     ###########################################################################
     # Weight Initializaiton
