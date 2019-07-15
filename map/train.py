@@ -144,6 +144,9 @@ def train(
 
 def _get_parser():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    ###########################################################################
+    # Data options
+    ###########################################################################
     parser.add_argument(
         "--datapath",
         type = str,
@@ -151,6 +154,44 @@ def _get_parser():
         default = DATAPATH,
         help = "path to data folder"
     )
+    parser.add_argument(
+        "--scale-inputs",
+        action="store_true",
+        help = "set flag to scale input images"
+    )
+    parser.add_argument(
+        "--workers",
+        type = int,
+        metavar = '[int]',
+        default = WORKERS,
+        help = "number of workers in DataLoader"
+    )
+    ###########################################################################
+    # Loading/Saving
+    ###########################################################################
+    parser.add_argument(
+        "--savepath",
+        type = str,
+        metavar = '[str]',
+        default = SAVEPATH,
+        help = "folder where model checkpoints should be saved -- if None model will not be saved "
+    )
+    parser.add_argument(
+        "--save-freq",
+        type = str,
+        metavar = '[str]',
+        default = SAVE_FREQ,
+        help = "how often model checkpoints should be saved (in epochs) "
+    )
+    parser.add_argument(
+        "--load-model",
+        type = str,
+        default = None,
+        help = "Specify a saved model to load and train.  Other arguments relating to model paremeters (padding, kernel-size, etc..) will be ignored.  Training parameters (learning rate, update frequency, etc ...) may still be specified."
+    )
+    ###########################################################################
+    # Model Architecture Options
+    ###########################################################################
     parser.add_argument(
         "--conv-layers",
         type = int,
@@ -183,6 +224,11 @@ def _get_parser():
         help = "zero padding to be used in Conv3d layers"
     )
     parser.add_argument(
+        "--even-padding",
+        action = "store_true",
+        help = "Calculate padding vectors to ensure even perfect overlap with kernel applications.  Layers with stride = 1 will have input dimensions preserved.  The '--padding' argument is ignored when this flag is set"
+    )
+    parser.add_argument(
         "--stride",
         type = int,
         nargs = '+',
@@ -197,65 +243,6 @@ def _get_parser():
         metavar = 'int',
         default = [4,4,4],
         help = "filters to apply to each channel -- one entry per layer"
-    )
-    parser.add_argument(
-        "--batch-size",
-        type = int,
-        metavar = '[int]',
-        default = 32,
-        help = "number of samples per batch"
-    )
-    parser.add_argument(
-        "--epochs",
-        type = int,
-        metavar = '[int]',
-        default = EPOCHS,
-        help = "number of epochs to train over"
-    )
-    parser.add_argument(
-        "--update-freq",
-        type = int,
-        metavar = '[int]',
-        default = UPDATE_FREQ,
-        help = "how often (in epochs) to asses test set accuracy"
-    )
-    parser.add_argument(
-        "--lr",
-        type = float,
-        metavar = '[float]',
-        default = LEARNING_RATE,
-        help = "learning rate paramater"
-    )
-    parser.add_argument(
-        "--workers",
-        type = int,
-        metavar = '[int]',
-        default = WORKERS,
-        help = "number of workers in DataLoader"
-    )
-    parser.add_argument(
-        "--cuda",
-        action="store_true",
-        help = "set flag to use cuda device(s)"
-    )
-    parser.add_argument(
-        "--savepath",
-        type = str,
-        metavar = '[str]',
-        default = SAVEPATH,
-        help = "folder where model checkpoints should be saved -- if None model will not be saved "
-    )
-    parser.add_argument(
-        "--save-freq",
-        type = str,
-        metavar = '[str]',
-        default = SAVE_FREQ,
-        help = "how often model checkpoints should be saved (in epochs) "
-    )
-    parser.add_argument(
-        "--scale-inputs",
-        action="store_true",
-        help = "set flag to scale input images"
     )
     parser.add_argument(
         "--weight-init",
@@ -283,22 +270,50 @@ def _get_parser():
         choices = actv_funcs.keys(),
         help = "activation functions to be used in convolutional layers -- must be 1 or n_conv_layers [{}]".format(', '.join(actv_funcs.keys()))
     )
+    ###########################################################################
+    #  Training Options
+    ###########################################################################
     parser.add_argument(
-        "--even-padding",
-        action = "store_true",
-        help = "Calculate padding vectors to ensure even perfect overlap with kernel applications.  Layers with stride = 1 will have input dimensions preserved.  The '--padding' argument is ignored when this flag is set"
+        "--lr",
+        type = float,
+        metavar = '[float]',
+        default = LEARNING_RATE,
+        help = "learning rate paramater"
     )
+    parser.add_argument(
+        "--batch-size",
+        type = int,
+        metavar = '[int]',
+        default = 32,
+        help = "number of samples per batch"
+    )
+    parser.add_argument(
+        "--epochs",
+        type = int,
+        metavar = '[int]',
+        default = EPOCHS,
+        help = "number of epochs to train over"
+    )
+    parser.add_argument(
+        "--update-freq",
+        type = int,
+        metavar = '[int]',
+        default = UPDATE_FREQ,
+        help = "how often (in epochs) to asses test set accuracy"
+    )
+    parser.add_argument(
+        "--cuda",
+        action="store_true",
+        help = "set flag to use cuda device(s)"
+    )
+    ###########################################################################
+    # Misc. Options
+    ###########################################################################
     parser.add_argument(
         "--debug-size",
         type = int,
         nargs = 4, 
         help = "Print out the expected architecture.  4 Integers should be supplied to this argument [channels, dimx, dimy, dimz].  Program execution will terminate afterwards"
-    )
-    parser.add_argument(
-        "--load-model",
-        type = str,
-        default = None,
-        help = "Specify a saved model to load and train.  Other arguments relating to model paremeters (padding, kernel-size, etc..) will be ignored.  Training parameters (learning rate, update frequency, etc ...) may still be specified."
     )
     parser.add_argument(
         "--silent",
@@ -307,7 +322,9 @@ def _get_parser():
         help = "NOT IMPLEMENTED"
     )
 
+    ###########################################################################
     # not implemented
+    ###########################################################################
     parser.add_argument(
         "--subpooling",
         action="store_true",
