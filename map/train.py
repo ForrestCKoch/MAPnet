@@ -6,7 +6,7 @@ from datetime import datetime
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from torchsummary import summary
+#from torchsummary import summary
 from tqdm import tqdm
 
 
@@ -274,7 +274,7 @@ def _get_parser():
         "--pooling",
         type = str,
         choices = ['max','avg'],
-        metavar = 'str',
+        metavar = '[str]',
         default = None,
         help = "which pooling method to apply in between convolution layers.  If this argument is not specified, then no pooling will be performed"
     )
@@ -333,12 +333,6 @@ def _get_parser():
     ###########################################################################
     # not implemented
     ###########################################################################
-    parser.add_argument(
-        "--subpooling",
-        action="store_true",
-        #help = "set flag to use subpooling between Conv3d layers"
-        help = "NOT IMPLEMENTED"
-    )
     parser.add_argument(
         "--encode-age",
         action="store_true",
