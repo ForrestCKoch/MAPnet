@@ -467,6 +467,9 @@ if __name__ == '__main__':
         if not os.path.exists(args.load_model):
             raise ValueError("Cannot load model -- {} does not exist".format(args.load_model))
         model = torch.load(args.load_model)
+        # a quick hack to allow for backwards compatibility
+        if not hasattr(model,'even_padding'):
+            model.even_padding = False
 
 
     ###########################################################################
