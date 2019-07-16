@@ -442,7 +442,7 @@ if __name__ == '__main__':
         samples = test_dict,
         labels = test_ages/100, # divide by 100 for faster learning!?
         scale_inputs = args.scale_inputs,
-        cache_images = True
+        cache_images = False
     )
 
     ###########################################################################
@@ -476,6 +476,9 @@ if __name__ == '__main__':
         if not os.path.exists(args.load_model):
             raise ValueError("Cannot load model -- {} does not exist".format(args.load_model))
         model = torch.load(args.load_model)
+        # a quick hack to allow for backwards compatibility
+        if not hasattr(model,'even_padding'):
+            model.even_padding = False
 
 
     ###########################################################################
