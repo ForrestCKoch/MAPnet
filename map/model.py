@@ -115,6 +115,9 @@ class MAPnet(nn.Module):
         input dimensions preserved in the output.
         :param pool: which pooling method to apply ('max' or 'avg').  If None,
         no pooling will be applied (which is the default).
+        Pooling will be performed with a kernel size and stride of 2,
+        and padding will be added to ensure the whole of the input is used.
+        If pool = 'avg', padding will not be used to calculate the average.
         """
         #######################################################################
         # Sanitizing input
@@ -220,15 +223,15 @@ class MAPnet(nn.Module):
 
             conv_layers.append(
                 nn.Conv3d(
-                    in_channels=self.n_channels[-2], 
-                    out_channels=self.n_channels[-1], 
-                    kernel_size=kernel[i], 
-                    stride=stride[i], 
-                    padding=0 if even_padding else padding[i], 
-                    dilation=dilation[i], 
-                    groups=self.n_channels[-2], 
-                    bias=True, 
-                    padding_mode='zeros'
+                    in_channels = self.n_channels[-2], 
+                    out_channels = self.n_channels[-1], 
+                    kernel_size = kernel[i], 
+                    stride = stride[i], 
+                    padding = 0 if even_padding else padding[i], 
+                    dilation = dilation[i], 
+                    groups = self.n_channels[-2], 
+                    bias = True, 
+                    padding_mode = 'zeros'
                 )
             )
             if self.pool:
