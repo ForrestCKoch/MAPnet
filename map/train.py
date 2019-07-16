@@ -479,6 +479,8 @@ if __name__ == '__main__':
         # a quick hack to allow for backwards compatibility
         if not hasattr(model,'even_padding'):
             model.even_padding = False
+        if not hasattr(model,'pool'):
+            model.pool = False
 
 
     ###########################################################################
