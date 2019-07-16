@@ -2,7 +2,6 @@ from typing import Any, Optional, Callable, Tuple, List
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
-from torchsummary import summary
 
 import numpy as np
 
