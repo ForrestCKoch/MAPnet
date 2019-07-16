@@ -48,20 +48,38 @@ def get_sample_ages(
             id_to_age[sid] = float(age)
     return np.array([id_to_age[i] for i in ids],dtype=np.float32)
     
-def encode_age(
+def encode_age_ordinal(
         age: float,
         bins: np.ndarray,
-    ):
+    )->torch.Tensor:
     """
-    Encode age as a binary vector according to the provided list.
+    Encode age as an ordinal binary vector according to the provided list.
     Given a List [x_1 < x_2 < ... < x_n] a binary vector of
     length n will be returned where each element is 1
     if it is less than or equal to the give age and 0 otherwise.
     :param age: age to be encoded
     :param bins: List of bin boundaries 
     """
+
     return torch.from_numpy(np.array(bins <= age,dtype=np.float32))
-     
+
+def encode_age_nonordinal(
+        age: float,
+        bins: np.ndarray,
+    )->torch.Tensor:
+    """
+    Encode age as a non-ordinal binary vector according to the provided list.
+    Given a List [x_1 < x_2 < ... < x_n ], a binary vector of
+    length n+1 will be returned where the ith element is equal to 1 if
+    it is less than x_i, but greater than x_{i-1}. Thus the first bin
+    will capture all values [-inf,x_1], and the n+1th bin will
+    capture all values [x_n,inf]
+    """
+    upr_bins = np.append(bins,np.inf)
+    lwr_bins = np.roll(upr_bins,1)
+    lwr_bins[0] = np.NINF
+    return torch.Tensor(np.array((age >= lwr_bins)*(age < upr_bins),dtype=np.float32))
+    
 
 def check_subject_folder(path):
     return False
