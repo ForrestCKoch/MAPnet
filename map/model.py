@@ -89,7 +89,8 @@ class MAPnet(nn.Module):
             input_channels: Optional[int] = 1,
             conv_actv: Optional[List[Callable[[nn.Module],nn.Module]]] = [F.relu],
             fc_actv: Optional[List[Callable[[nn.Module],nn.Module]]] = [F.relu,F.tanh,F.relu],
-            even_padding: Optional[bool] = False
+            even_padding: Optional[bool] = False,
+            pool: Optional[str] = None
         ):
         """
         Initialize an instance of MAPnet.
@@ -112,6 +113,8 @@ class MAPnet(nn.Module):
         convolutional layer to ensure convolutions line up exactly with
         the input. Furthermore, layers with stride == 1 will have their
         input dimensions preserved in the output.
+        :param pool: which pooling method to apply ('max' or 'avg').  If None,
+        no pooling will be applied (which is the default).
         """
         #######################################################################
         # Sanitizing input
@@ -149,7 +152,8 @@ class MAPnet(nn.Module):
 
         self.conv_layer_sizes = list([np.array(input_shape)])
         self.even_padding = even_padding # We will need this later
-
+        self.pool = False
+        self.pool_layer_sizes = list()
         #######################################################################
         # Calculate layer sizes and padding if needed
         #######################################################################
@@ -163,11 +167,15 @@ class MAPnet(nn.Module):
             # `even_padding` is set, we must be aple to pad with an odd number
             # of zeros (i.e only on one side).  Thus we will need to use a
             # `torch.nn.ConstPad3d` layer to get the necessary size.
+            #
+            # Furthermore there is an extra layer of messyness introduced by
+            # my attempt to allow for supbooling
             ###################################################################
             if even_padding:
                 preserve = True if np.sum(stride[i] == 1) == 3 else False
                 padding[i] = get_even_padding(
-                    inputs = self.conv_layer_sizes[-1],
+                    inputs = self.pool_layer_sizes[-1] if self.pool and i \
+                            else self.conv_layer_sizes[-1],
                     dilation = dilation[i],
                     kernel = kernel[i],
                     stride = stride[i],
@@ -177,21 +185,36 @@ class MAPnet(nn.Module):
 
             self.conv_layer_sizes.append(
                 get_out_dims(
-                    self.conv_layer_sizes[-1], # input dimensions    
-                    np.repeat(0 if even_padding else padding[i],3), # *padding
-                    np.repeat(dilation[i],3), # dilation
-                    np.repeat(kernel[i],3), # kernel
-                    np.repeat(stride[i],3), # stride
+                    self.pool_layer_sizes[-1] if self.pool and i \
+                        else self.conv_layer_sizes[-1], # input dimensions    
+                    np.repeat(0,3) if even_padding else padding[i], # *padding
+                    dilation[i], # dilation
+                    kernel[i], # kernel
+                    stride[i], # stride
                 )
             )
+            if self.pool:
+                self.pool_layer_sizes.append(
+                    get_out_dims(
+                        self.conv_layer_sizes[-1],
+                        self.conv_layer_sizes[-1]%2,
+                        np.repeat(1,3),
+                        np.repeat(2,3),
+                        np.repeat(2,3)
+                    )
+                )
+
+
+
 
         #######################################################################
-        # Initialize Conv3d layers
+        # Initialize Conv3d & Pooling layers
         #######################################################################
         conv_layers = list()
+        pool_layers = list()
+        pad_layers = list()
         self.conv_actv = list()
         self.n_channels=list([input_channels])
-        padding_layers = list()
         for i in range(0,n_conv_layers):
             self.n_channels.append(self.n_channels[-1] * filters[i])
 
@@ -208,6 +231,17 @@ class MAPnet(nn.Module):
                     padding_mode='zeros'
                 )
             )
+            if self.pool:
+                if pool == 'max':
+                    pool_layers.append(
+                        nn.MaxPool3d(2,padding=self.conv_layer_sizes[-1]%2)
+                    )
+                else:
+                    pool_layers.append(
+                        nn.AvgPool3d(2,padding=self.conv_layer_sizes[-1]%2,
+                            count_include_pad=False)
+                    )
+                
             # Manage our activation functions
             self.conv_actv.append(conv_actv[i] if len(conv_actv) > 1 else conv_actv[0])
 
@@ -217,16 +251,17 @@ class MAPnet(nn.Module):
             if even_padding:
                 pad = (np.floor(d/2), np.ceil(d/2), np.floor(h/2), 
                         np.ceil(h/2), np.floor(w/2), np.ceil(w/2))
-                padding_layers.append(nn.ConstantPad3d(pad,0))
+                pad_layers.append(nn.ConstantPad3d(pad,0))
 
         self.conv_layers = nn.ModuleList(conv_layers)
-        self.pad_layers = nn.ModuleList(padding_layers) if even_padding else None
+        self.pool_layers = nn.ModuleList(pool_layers)
+        self.pad_layers = nn.ModuleList(pad_layers) if even_padding else None
         
         #######################################################################
         # Initialize Fully Connected layers
         #######################################################################
         # calculate the size of flattening out the last conv layer
-        layer_size = self.conv_layer_sizes[-1]
+        layer_size = self.pool_layer_size if self.pool else self.conv_layer_sizes[-1]
         self.fc_input_size  = int(np.prod(layer_size))*self.n_channels[-1]
 
         fc_layers = list()
@@ -245,6 +280,8 @@ class MAPnet(nn.Module):
                 x = self.pad_layers[i](x)
             actv = self.conv_actv[i]
             x = actv(conv(x))
+            if self.pool:
+                x = self.pool_layers[i](x)
 
         x = x.view(-1,self.fc_input_size)
         x = self.d1(x)

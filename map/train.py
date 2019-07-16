@@ -270,6 +270,14 @@ def _get_parser():
         choices = actv_funcs.keys(),
         help = "activation functions to be used in convolutional layers -- must be 1 or n_conv_layers [{}]".format(', '.join(actv_funcs.keys()))
     )
+    parser.add_argument(
+        "--pooling",
+        type = str,
+        choices = ['max','avg'],
+        metavar = 'str',
+        default = None,
+        help = "which pooling method to apply in between convolution layers.  If this argument is not specified, then no pooling will be performed"
+    )
     ###########################################################################
     #  Training Options
     ###########################################################################
@@ -454,7 +462,8 @@ if __name__ == '__main__':
             input_channels = train_ds.images_per_subject,
             conv_actv = [actv_funcs[x] for x in args.conv_actv],
             fc_actv = [actv_funcs[x] for x in args.fc_actv],
-            even_padding = args.even_padding
+            even_padding = args.even_padding,
+            pool = args.pooling
         )
         ###########################################################################
         # Weight Initializaiton
