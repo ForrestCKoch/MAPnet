@@ -15,7 +15,6 @@ from data import *
 from model import *
 from train import *
 
-# Use of typing inspired by https://github.com/vlukiyanov/pt-sdae
 def train(
         train: torch.utils.data.Dataset, 
         test: torch.utils.data.Dataset, 
@@ -29,10 +28,24 @@ def train(
         cuda: Optional[bool] = CUDA, 
         loss_func: Optional[Callable[[float,float],None]] = None, 
         optimizer: Optional[Callable[[torch.nn.Module],torch.optim.Optimizer]]=None, 
-        scheduler: Optional[Callable[[int, torch.nn.Module],None]] = None
+        scheduler: Optional[Callable[[int, torch.nn.Module],None]] = None,
+        silent: Optional[bool] = False
     ) -> None:
     """
-    Train the provided MAPnet
+    Train the provided MAPnet model.
+
+    Note: 
+    If `savepath` is specified, models will be saved in a new folder
+    named according to the date and time it is run.  If mutliple instances
+    are being run in parallel, each instance should have a different 
+    savepath to avoid overlap.
+
+    Furthermore, if the supplied model has been pre-trained, the naming
+    scheme will not reflect this.  The user should take care to make sure
+    this information is not lost.  I suggest setting savepath to the 
+    datetime folder created in the previous training stage.  This way
+    the model will be grouped with its 'ancestor' models.
+
     :param train: Dataset object containing the training data.
     :param test: Dataset object containing the test data.
     :param model: `torch.nn.Module` model to be trained.
@@ -89,7 +102,7 @@ def train(
 
         if model_scheduler is not None:
             model_scheduler.step()
-        data_iterator = tqdm(train_data_loader,desc=desc_genr(i,test_loss,0))
+        data_iterator = tqdm(train_data_loader,desc=desc_genr(i,test_loss,0),disable=silent)
 
         train_loss = list()
         #######################################################################
@@ -131,6 +144,9 @@ def train(
 
 def _get_parser():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    ###########################################################################
+    # Data options
+    ###########################################################################
     parser.add_argument(
         "--datapath",
         type = str,
@@ -138,6 +154,44 @@ def _get_parser():
         default = DATAPATH,
         help = "path to data folder"
     )
+    parser.add_argument(
+        "--scale-inputs",
+        action="store_true",
+        help = "set flag to scale input images"
+    )
+    parser.add_argument(
+        "--workers",
+        type = int,
+        metavar = '[int]',
+        default = WORKERS,
+        help = "number of workers in DataLoader"
+    )
+    ###########################################################################
+    # Loading/Saving
+    ###########################################################################
+    parser.add_argument(
+        "--savepath",
+        type = str,
+        metavar = '[str]',
+        default = SAVEPATH,
+        help = "folder where model checkpoints should be saved -- if None model will not be saved "
+    )
+    parser.add_argument(
+        "--save-freq",
+        type = str,
+        metavar = '[str]',
+        default = SAVE_FREQ,
+        help = "how often model checkpoints should be saved (in epochs) "
+    )
+    parser.add_argument(
+        "--load-model",
+        type = str,
+        default = None,
+        help = "Specify a saved model to load and train.  Other arguments relating to model paremeters (padding, kernel-size, etc..) will be ignored.  Training parameters (learning rate, update frequency, etc ...) may still be specified."
+    )
+    ###########################################################################
+    # Model Architecture Options
+    ###########################################################################
     parser.add_argument(
         "--conv-layers",
         type = int,
@@ -170,6 +224,11 @@ def _get_parser():
         help = "zero padding to be used in Conv3d layers"
     )
     parser.add_argument(
+        "--even-padding",
+        action = "store_true",
+        help = "Calculate padding vectors to ensure even perfect overlap with kernel applications.  Layers with stride = 1 will have input dimensions preserved.  The '--padding' argument is ignored when this flag is set"
+    )
+    parser.add_argument(
         "--stride",
         type = int,
         nargs = '+',
@@ -184,65 +243,6 @@ def _get_parser():
         metavar = 'int',
         default = [4,4,4],
         help = "filters to apply to each channel -- one entry per layer"
-    )
-    parser.add_argument(
-        "--batch-size",
-        type = int,
-        metavar = '[int]',
-        default = 32,
-        help = "number of samples per batch"
-    )
-    parser.add_argument(
-        "--epochs",
-        type = int,
-        metavar = '[int]',
-        default = EPOCHS,
-        help = "number of epochs to train over"
-    )
-    parser.add_argument(
-        "--update-freq",
-        type = int,
-        metavar = '[int]',
-        default = UPDATE_FREQ,
-        help = "how often (in epochs) to asses test set accuracy"
-    )
-    parser.add_argument(
-        "--lr",
-        type = float,
-        metavar = '[float]',
-        default = LEARNING_RATE,
-        help = "learning rate paramater"
-    )
-    parser.add_argument(
-        "--workers",
-        type = int,
-        metavar = '[int]',
-        default = WORKERS,
-        help = "number of workers in DataLoader"
-    )
-    parser.add_argument(
-        "--cuda",
-        action="store_true",
-        help = "set flag to use cuda device(s)"
-    )
-    parser.add_argument(
-        "--savepath",
-        type = str,
-        metavar = '[str]',
-        default = SAVEPATH,
-        help = "folder where model checkpoints should be saved -- if None model will not be saved "
-    )
-    parser.add_argument(
-        "--save-freq",
-        type = str,
-        metavar = '[str]',
-        default = SAVE_FREQ,
-        help = "how often model checkpoints should be saved (in epochs) "
-    )
-    parser.add_argument(
-        "--scale-inputs",
-        action="store_true",
-        help = "set flag to scale input images"
     )
     parser.add_argument(
         "--weight-init",
@@ -270,20 +270,61 @@ def _get_parser():
         choices = actv_funcs.keys(),
         help = "activation functions to be used in convolutional layers -- must be 1 or n_conv_layers [{}]".format(', '.join(actv_funcs.keys()))
     )
+    ###########################################################################
+    #  Training Options
+    ###########################################################################
+    parser.add_argument(
+        "--lr",
+        type = float,
+        metavar = '[float]',
+        default = LEARNING_RATE,
+        help = "learning rate paramater"
+    )
+    parser.add_argument(
+        "--batch-size",
+        type = int,
+        metavar = '[int]',
+        default = 32,
+        help = "number of samples per batch"
+    )
+    parser.add_argument(
+        "--epochs",
+        type = int,
+        metavar = '[int]',
+        default = EPOCHS,
+        help = "number of epochs to train over"
+    )
+    parser.add_argument(
+        "--update-freq",
+        type = int,
+        metavar = '[int]',
+        default = UPDATE_FREQ,
+        help = "how often (in epochs) to asses test set accuracy"
+    )
+    parser.add_argument(
+        "--cuda",
+        action="store_true",
+        help = "set flag to use cuda device(s)"
+    )
+    ###########################################################################
+    # Misc. Options
+    ###########################################################################
     parser.add_argument(
         "--debug-size",
         type = int,
         nargs = 4, 
         help = "Print out the expected architecture.  4 Integers should be supplied to this argument [channels, dimx, dimy, dimz].  Program execution will terminate afterwards"
     )
-
-    # not implemented
     parser.add_argument(
         "--silent",
         action = "store_true",
         #help = "set flag for quiet training"
         help = "NOT IMPLEMENTED"
     )
+
+    ###########################################################################
+    # not implemented
+    ###########################################################################
     parser.add_argument(
         "--subpooling",
         action="store_true",
@@ -399,26 +440,39 @@ if __name__ == '__main__':
     ###########################################################################
     # Initializing Model
     ###########################################################################
-    if not args.silent:
-        print("Initializing model ...")
-    model = MAPnet(
-        input_shape = train_ds.image_shape,
-        n_conv_layers = args.conv_layers,
-        padding = args.padding,
-        dilation = args.dilation,
-        kernel = args.kernel_size,
-        stride = args.stride,
-        filters = args.filters,
-        input_channels = train_ds.images_per_subject,
-        conv_actv = [actv_funcs[x] for x in args.conv_actv],
-        fc_actv = [actv_funcs[x] for x in args.fc_actv]
-    )
+    if args.load_model is None:
+        if not args.silent:
+            print("Initializing model ...")
+        model = MAPnet(
+            input_shape = train_ds.image_shape,
+            n_conv_layers = args.conv_layers,
+            padding = args.padding,
+            dilation = args.dilation,
+            kernel = args.kernel_size,
+            stride = args.stride,
+            filters = args.filters,
+            input_channels = train_ds.images_per_subject,
+            conv_actv = [actv_funcs[x] for x in args.conv_actv],
+            fc_actv = [actv_funcs[x] for x in args.fc_actv],
+            even_padding = args.even_padding
+        )
+        ###########################################################################
+        # Weight Initializaiton
+        ###########################################################################
+        fn = winit_funcs[args.weight_init]
+        model.apply(lambda x: init_weights(x,fn))
+    else:
+        if not args.silent:
+            print("Loading model ...")
+        if not os.path.exists(args.load_model):
+            raise ValueError("Cannot load model -- {} does not exist".format(args.load_model))
+        model = torch.load(args.load_model)
+
+
     ###########################################################################
-    # Weight Initializaiton
+    # Move the model to GPU if cuda is requested
     ###########################################################################
     model = model.cuda() if args.cuda else model
-    fn = winit_funcs[args.weight_init]
-    model.apply(lambda x: init_weights(x,fn))
 
     ###########################################################################
     # Print out model info ...

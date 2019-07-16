@@ -196,6 +196,8 @@ Thirty epochs in, it appears to be making some slight improvements over simply
 predicting the mean.
 ```
 Epoch: 30 Test Loss: 4.853e-03 Train Loss: 4.802e-03: 100%|██████████████████████████████████████████| 435/435 [11:24<00:00,  1.49s/it]
+...
+Epoch: 49 Test Loss: 4.191e-03 Train Loss: 3.921e-03: 100%█████████████████████████████████████████████████████████████████████████| 435/435 [11:10<00:00,  1.46s/it]
 ```
 
 Note that if it were predicting the mean, loss would be around 5.6e-03.

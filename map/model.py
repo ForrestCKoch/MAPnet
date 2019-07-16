@@ -50,20 +50,46 @@ def get_out_dims(
     """
     return np.floor(1+(inputs-1+(2*padding)-(dilation*(kernel-1)))/stride)
 
+def get_even_padding(
+        inputs: np.ndarray,
+        dilation: np.ndarray,
+        kernel: np.ndarray,
+        stride: np.ndarray,
+        preserve_inputs: bool = False
+    )->np.ndarray:
+    """
+    Calculate the padding vector necessary to ensure perfect overlap of 
+    kernel application with input tensor.
+    :param inputs: 3 element vector for shape of input
+    :param dilation: 3 element vector for dilation parameters
+    :param kernel: 3 element vector for kernel parameters
+    :param stride: 3 element vector for stride parameters 
+    :param preserve_inputs: require output dimensions to be unchanged
+    """
+    if preserve_inputs and np.sum(stride == 1) != 3:
+        raise ValueError("If input dimension is to be preserved, stride should not be > 1.")
+
+    if preserve_inputs:
+        return (dilation*(kernel-1))
+    else:
+        return (dilation*(kernel-1)+1-inputs)%stride 
+
+
 class MAPnet(nn.Module):
 
     def __init__(
             self, 
             input_shape: Tuple[int,int,int],
-            n_conv_layers: int = CONV_LAYERS,
-            padding: List[int] = [PADDING],
-            dilation: List[int] = [DILATION],
-            kernel: List[int] = [KERNEL_SIZE],
-            stride: List[int] = [STRIDE],
-            filters: List[int] = FILTERS,
-            input_channels: int = 1,
-            conv_actv: List[Callable[[nn.Module],nn.Module]] = [F.relu],
-            fc_actv: List[Callable[[nn.Module],nn.Module]] = [F.relu,F.tanh,F.relu]
+            n_conv_layers: Optional[int] = CONV_LAYERS,
+            padding: Optional[List[int]] = [PADDING],
+            dilation: Optional[List[int]] = [DILATION],
+            kernel: Optional[List[int]] = [KERNEL_SIZE],
+            stride: Optional[List[int]] = [STRIDE],
+            filters: Optional[List[int]] = FILTERS,
+            input_channels: Optional[int] = 1,
+            conv_actv: Optional[List[Callable[[nn.Module],nn.Module]]] = [F.relu],
+            fc_actv: Optional[List[Callable[[nn.Module],nn.Module]]] = [F.relu,F.tanh,F.relu],
+            even_padding: Optional[bool] = False
         ):
         """
         Initialize an instance of MAPnet.
@@ -81,7 +107,15 @@ class MAPnet(nn.Module):
         :param fc_actv: List of activation functions to be used in
         fully conneced layers.  If only one element is supplied, then this
         activation function will be used for all layers.
+        :param even_padding:  setting this to True will result in the padding 
+        parameter being ignored. Padding will be added to the input of each
+        convolutional layer to ensure convolutions line up exactly with
+        the input. Furthermore, layers with stride == 1 will have their
+        input dimensions preserved in the output.
         """
+        #######################################################################
+        # Sanitizing input
+        #######################################################################
         if len(input_shape) != 3:
             raise ValueError("Expected input_shape to have 3 dimensions not {}".format(len(input_shape)))
         elif len(filters) != n_conv_layers:
@@ -101,7 +135,9 @@ class MAPnet(nn.Module):
         
         super(MAPnet,self).__init__()
 
+        #######################################################################
         # Handle the case where only 1 number is supplied
+        #######################################################################
         if len(padding) == 1:
             padding = np.repeat(padding,n_conv_layers)
         if len(dilation) == 1:
@@ -112,50 +148,86 @@ class MAPnet(nn.Module):
             stride = np.repeat(stride,n_conv_layers)
 
         self.conv_layer_sizes = list([np.array(input_shape)])
+        self.even_padding = even_padding # We will need this later
+
+        #######################################################################
+        # Calculate layer sizes and padding if needed
+        #######################################################################
         for i in range(0,n_conv_layers):
+            ###################################################################
+            # *** This bit is a little complicated, so I might leave a detailed
+            # note explaining this next little section of code ***
+            #
+            # When the normal `padding` parameter is used, padding will be 
+            # implemented through the Conv3d layers; HOWEVER, when 
+            # `even_padding` is set, we must be aple to pad with an odd number
+            # of zeros (i.e only on one side).  Thus we will need to use a
+            # `torch.nn.ConstPad3d` layer to get the necessary size.
+            ###################################################################
+            if even_padding:
+                preserve = True if np.sum(stride[i] == 1) == 3 else False
+                padding[i] = get_even_padding(
+                    inputs = self.conv_layer_sizes[-1],
+                    dilation = dilation[i],
+                    kernel = kernel[i],
+                    stride = stride[i],
+                    preserve_inputs = preserve
+                )
+                self.conv_layer_sizes[-1] += padding[i]
+
             self.conv_layer_sizes.append(
                 get_out_dims(
                     self.conv_layer_sizes[-1], # input dimensions    
-                    np.repeat(padding[i],3), # padding
+                    np.repeat(0 if even_padding else padding[i],3), # *padding
                     np.repeat(dilation[i],3), # dilation
                     np.repeat(kernel[i],3), # kernel
                     np.repeat(stride[i],3), # stride
                 )
             )
 
+        #######################################################################
+        # Initialize Conv3d layers
+        #######################################################################
         conv_layers = list()
         self.conv_actv = list()
         self.n_channels=list([input_channels])
+        padding_layers = list()
         for i in range(0,n_conv_layers):
             self.n_channels.append(self.n_channels[-1] * filters[i])
+
             conv_layers.append(
                 nn.Conv3d(
                     in_channels=self.n_channels[-2], 
                     out_channels=self.n_channels[-1], 
                     kernel_size=kernel[i], 
                     stride=stride[i], 
-                    padding=padding[i], 
+                    padding=0 if even_padding else padding[i], 
                     dilation=dilation[i], 
                     groups=self.n_channels[-2], 
                     bias=True, 
                     padding_mode='zeros'
                 )
             )
+            # Manage our activation functions
             self.conv_actv.append(conv_actv[i] if len(conv_actv) > 1 else conv_actv[0])
+
+            # And if `even_padding` was set, we will need to generate these layers 
+            # but the complication here is that we now need to calculate
+            # (P_Left,P_Right,P_Up,P_Down,P_Front,P_Back)
+            if even_padding:
+                pad = (np.floor(d/2), np.ceil(d/2), np.floor(h/2), 
+                        np.ceil(h/2), np.floor(w/2), np.ceil(w/2))
+                padding_layers.append(nn.ConstantPad3d(pad,0))
+
         self.conv_layers = nn.ModuleList(conv_layers)
+        self.pad_layers = nn.ModuleList(padding_layers) if even_padding else None
         
+        #######################################################################
+        # Initialize Fully Connected layers
+        #######################################################################
         # calculate the size of flattening out the last conv layer
         layer_size = self.conv_layer_sizes[-1]
         self.fc_input_size  = int(np.prod(layer_size))*self.n_channels[-1]
-
-        """
-        print("Conv3d sizes")
-        print(self.conv_layer_sizes)
-        print("Number of channels")
-        print(self.n_channels)
-        print("Output nodes of convolutions")
-        print(self.fc_input_size)
-        """
 
         fc_layers = list()
 
@@ -169,6 +241,8 @@ class MAPnet(nn.Module):
 
     def forward(self,x): 
         for i,conv in enumerate(self.conv_layers):
+            if self.even_padding:
+                x = self.pad_layers[i](x)
             actv = self.conv_actv[i]
             x = actv(conv(x))
 
