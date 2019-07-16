@@ -393,7 +393,7 @@ if __name__ == '__main__':
         samples = test_dict,
         labels = test_ages/100, # divide by 100 for faster learning!?
         scale_inputs = args.scale_inputs,
-        cache_images = True
+        cache_images = False
     )
 
     ###########################################################################
