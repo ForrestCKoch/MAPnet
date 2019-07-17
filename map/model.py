@@ -47,7 +47,7 @@ def get_out_dims(
     :param kernel: 3 element vector for kernel parameters
     :param stride: 3 element vector for stride parameters 
     """
-    return np.floor(1+(inputs-1+(2*padding)-(dilation*(kernel-1)))/stride)
+    return np.floor(1+(inputs-1+(2*padding)-(dilation*(kernel-1)))/stride).astype(np.int32)
 
 def get_even_padding(
         inputs: np.ndarray,
@@ -69,9 +69,9 @@ def get_even_padding(
         raise ValueError("If input dimension is to be preserved, stride should not be > 1.")
 
     if preserve_inputs:
-        return (dilation*(kernel-1))
+        return (dilation*(kernel-1)).astype(np.int32)
     else:
-        return (dilation*(kernel-1)+1-inputs)%stride 
+        return ((dilation*(kernel-1)+1-inputs)%stride).astype(np.int32)
 
 
 class MAPnet(nn.Module):
@@ -123,7 +123,7 @@ class MAPnet(nn.Module):
         #######################################################################
         if len(input_shape) != 3:
             raise ValueError("Expected input_shape to have 3 dimensions not {}".format(len(input_shape)))
-        elif len(filters) != n_conv_layers:
+        elif not ((len(filters) == n_conv_layers) or (len(filters) == 1)):
             raise ValueError("Length of filters ({}) does not match n_conv_layers ({})".format(len(filters),n_conv_layers))
         elif not ((len(conv_actv) == 1) or (len(conv_actv) == n_conv_layers)):
             raise ValueError("conv_actv arguments has incorrect length")
@@ -143,18 +143,20 @@ class MAPnet(nn.Module):
         #######################################################################
         # Handle the case where only 1 number is supplied
         #######################################################################
+        if len(filters) == 1:
+            filters = list(np.repeat(filters,n_conv_layers))
         if len(padding) == 1:
-            padding = np.repeat(padding,n_conv_layers)
+            padding = list(np.repeat(padding,n_conv_layers))
         if len(dilation) == 1:
-            dilation = np.repeat(dilation,n_conv_layers)
+            dilation = list(np.repeat(dilation,n_conv_layers))
         if len(kernel) == 1:
-            kernel = np.repeat(kernel,n_conv_layers)
+            kernel = list(np.repeat(kernel,n_conv_layers))
         if len(stride) == 1:
-            stride = np.repeat(stride,n_conv_layers)
+            stride = list(np.repeat(stride,n_conv_layers))
 
         self.conv_layer_sizes = list([np.array(input_shape)])
         self.even_padding = even_padding # We will need this later
-        self.pool = False
+        self.pool = False if pool is None else True
         self.pool_layer_sizes = list()
         #######################################################################
         # Calculate layer sizes and padding if needed
@@ -174,13 +176,17 @@ class MAPnet(nn.Module):
             # my attempt to allow for supbooling
             ###################################################################
             if even_padding:
-                preserve = True if np.sum(stride[i] == 1) == 3 else False
+                preserve = True if stride[i] == 1 else False
+                print(preserve)
+                # TODO:
+                # This is really bad... I'm changing types from
+                # int to list/array here.  Find a better/more clear way!
                 padding[i] = get_even_padding(
                     inputs = self.pool_layer_sizes[-1] if self.pool and i \
                             else self.conv_layer_sizes[-1],
-                    dilation = dilation[i],
-                    kernel = kernel[i],
-                    stride = stride[i],
+                    dilation = np.repeat(dilation[i],3),
+                    kernel = np.repeat(kernel[i],3),
+                    stride = np.repeat(stride[i],3),
                     preserve_inputs = preserve
                 )
                 self.conv_layer_sizes[-1] += padding[i]
@@ -189,13 +195,13 @@ class MAPnet(nn.Module):
                 get_out_dims(
                     self.pool_layer_sizes[-1] if self.pool and i \
                         else self.conv_layer_sizes[-1], # input dimensions    
-                    np.repeat(0,3) if even_padding else padding[i], # *padding
-                    dilation[i], # dilation
-                    kernel[i], # kernel
-                    stride[i], # stride
+                    np.repeat(0 if even_padding else padding[i],3), # *padding
+                    np.repeat(dilation[i],3), # dilation
+                    np.repeat(kernel[i],3), # kernel
+                    np.repeat(stride[i],3) # stride
                 )
             )
-            if self.pool:
+            if self.pool is not None:
                 self.pool_layer_sizes.append(
                     get_out_dims(
                         self.conv_layer_sizes[-1],
@@ -205,6 +211,8 @@ class MAPnet(nn.Module):
                         np.repeat(2,3)
                     )
                 )
+        print(self.conv_layer_sizes)
+        print(self.pool_layer_sizes)
 
 
 
@@ -222,13 +230,13 @@ class MAPnet(nn.Module):
 
             conv_layers.append(
                 nn.Conv3d(
-                    in_channels = self.n_channels[-2], 
-                    out_channels = self.n_channels[-1], 
+                    in_channels = int(self.n_channels[-2]), 
+                    out_channels = int(self.n_channels[-1]), 
                     kernel_size = kernel[i], 
                     stride = stride[i], 
                     padding = 0 if even_padding else padding[i], 
                     dilation = dilation[i], 
-                    groups = self.n_channels[-2], 
+                    groups = int(self.n_channels[-2]), 
                     bias = True, 
                     padding_mode = 'zeros'
                 )
@@ -236,11 +244,12 @@ class MAPnet(nn.Module):
             if self.pool:
                 if pool == 'max':
                     pool_layers.append(
-                        nn.MaxPool3d(2,padding=self.conv_layer_sizes[-1]%2)
+                        nn.MaxPool3d(2,
+                            padding=tuple((self.conv_layer_sizes[-1]%2).astype(np.int32)))
                     )
                 else:
                     pool_layers.append(
-                        nn.AvgPool3d(2,padding=self.conv_layer_sizes[-1]%2,
+                        nn.AvgPool3d(2,padding=tuple((self.conv_layer_sizes[-1]%2).astype(np.int32)),
                             count_include_pad=False)
                     )
                 
@@ -251,8 +260,9 @@ class MAPnet(nn.Module):
             # but the complication here is that we now need to calculate
             # (P_Left,P_Right,P_Up,P_Down,P_Front,P_Back)
             if even_padding:
-                pad = (np.floor(d/2), np.ceil(d/2), np.floor(h/2), 
-                        np.ceil(h/2), np.floor(w/2), np.ceil(w/2))
+                d,h,w = padding[i] 
+                pad = (int(np.floor(d/2)), int(np.ceil(d/2)), int(np.floor(h/2)), 
+                        int(np.ceil(h/2)), int(np.floor(w/2)), int(np.ceil(w/2)))
                 pad_layers.append(nn.ConstantPad3d(pad,0))
 
         self.conv_layers = nn.ModuleList(conv_layers)
@@ -263,7 +273,7 @@ class MAPnet(nn.Module):
         # Initialize Fully Connected layers
         #######################################################################
         # calculate the size of flattening out the last conv layer
-        layer_size = self.pool_layer_size if self.pool else self.conv_layer_sizes[-1]
+        layer_size = self.pool_layer_sizes[-1] if self.pool else self.conv_layer_sizes[-1]
         self.fc_input_size  = int(np.prod(layer_size))*self.n_channels[-1]
 
         fc_layers = list()
