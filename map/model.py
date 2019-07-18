@@ -154,6 +154,8 @@ class MAPnet(nn.Module):
         if len(stride) == 1:
             stride = list(np.repeat(stride,n_conv_layers))
 
+        # note that conv_layer_sizes with have length n_conv_layers + 1
+        # because it also holds the input shape
         self.conv_layer_sizes = list([np.array(input_shape)])
         self.even_padding = even_padding # We will need this later
         self.pool = False if pool is None else True
@@ -177,7 +179,6 @@ class MAPnet(nn.Module):
             ###################################################################
             if even_padding:
                 preserve = True if stride[i] == 1 else False
-                print(preserve)
                 # TODO:
                 # This is really bad... I'm changing types from
                 # int to list/array here.  Find a better/more clear way!
@@ -189,7 +190,10 @@ class MAPnet(nn.Module):
                     stride = np.repeat(stride[i],3),
                     preserve_inputs = preserve
                 )
-                self.conv_layer_sizes[-1] += padding[i]
+                if (self.pool is None) or (i == 0):
+                    self.conv_layer_sizes[-1] += padding[i]
+                else:
+                    self.pool_layer_sizes[-1] += padding[i]
 
             self.conv_layer_sizes.append(
                 get_out_dims(
@@ -211,11 +215,6 @@ class MAPnet(nn.Module):
                         np.repeat(2,3)
                     )
                 )
-        print(self.conv_layer_sizes)
-        print(self.pool_layer_sizes)
-
-
-
 
         #######################################################################
         # Initialize Conv3d & Pooling layers
@@ -245,11 +244,11 @@ class MAPnet(nn.Module):
                 if pool == 'max':
                     pool_layers.append(
                         nn.MaxPool3d(2,
-                            padding=tuple((self.conv_layer_sizes[-1]%2).astype(np.int32)))
+                            padding=tuple((self.conv_layer_sizes[i+1]%2).astype(np.int32)))
                     )
                 else:
                     pool_layers.append(
-                        nn.AvgPool3d(2,padding=tuple((self.conv_layer_sizes[-1]%2).astype(np.int32)),
+                        nn.AvgPool3d(2,padding=tuple((self.conv_layer_sizes[+1]%2).astype(np.int32)),
                             count_include_pad=False)
                     )
                 
@@ -273,8 +272,13 @@ class MAPnet(nn.Module):
         # Initialize Fully Connected layers
         #######################################################################
         # calculate the size of flattening out the last conv layer
-        layer_size = self.pool_layer_sizes[-1] if self.pool else self.conv_layer_sizes[-1]
+        layer_size = self.pool_layer_sizes[-1] if self.pool \
+                else self.conv_layer_sizes[-1]
         self.fc_input_size  = int(np.prod(layer_size))*self.n_channels[-1]
+
+        print(self.conv_layer_sizes)
+        print(self.pool_layer_sizes)
+        print(self.fc_input_size)
 
         fc_layers = list()
 
