@@ -144,15 +144,18 @@ def test_model(
     :param cuda: whether to use the cuda device (model should already be moved to GPU)
     """
     total_loss = 0.0
-    for index, batch in enumerate(data_loader):
-        x,label = batch
-        if cuda:
-            x = x.cuda()
-            label = label.cuda()
-        y = model(x)
-        loss = loss_func(y,label.view(-1,1))
-        total_loss += float(loss.item())
-    test_loss = total_loss/(index+1)
+    # disable gradient calculations to avoid wasting memory
+    with torch.no_grad():
+        for index, batch in enumerate(data_loader):
+            x,label = batch
+            if cuda:
+                x = x.cuda()
+                label = label.cuda()
+            y = model(x)
+            loss = loss_func(y,label.view(-1,1))
+            total_loss += float(loss.item())
+        test_loss = total_loss/(index+1)
+    return test_loss
     
             
 
