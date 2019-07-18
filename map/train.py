@@ -13,11 +13,10 @@ from tqdm import tqdm
 from defaults import *
 from data import *
 from model import *
-from train import *
 
-def train(
-        train: torch.utils.data.Dataset, 
-        test: torch.utils.data.Dataset, 
+def train_model(
+        train_set: torch.utils.data.Dataset, 
+        test_set: torch.utils.data.Dataset, 
         model: torch.nn.Module, 
         epochs: Optional[int] = EPOCHS, 
         update_freq: Optional[int] = UPDATE_FREQ,
@@ -46,8 +45,8 @@ def train(
     datetime folder created in the previous training stage.  This way
     the model will be grouped with its 'ancestor' models.
 
-    :param train: Dataset object containing the training data.
-    :param test: Dataset object containing the test data.
+    :param train_set: Dataset object containing the training data.
+    :param test_set: Dataset object containing the test data.
     :param model: `torch.nn.Module` model to be trained.
     :param epoch: The number of epochs to train over.
     :param update_freq: Test set accuracy will be assessed every `update_freq` epochs.
@@ -62,13 +61,14 @@ def train(
     ###########################################################################
     # Some preamble to get everything ready for training
     ###########################################################################
-    train_data_loader = DataLoader(train, num_workers=num_workers,
+    train_data_loader = DataLoader(train_set, num_workers=num_workers,
             pin_memory=cuda, batch_size=batch_size,
             shuffle=True)
 
-    test_data_loader = DataLoader(test, num_workers=num_workers,
+    test_data_loader = DataLoader(test_set, num_workers=num_workers,
             pin_memory=cuda, batch_size=batch_size,
             shuffle=True)
+
     desc_genr = lambda x,y,z: 'Epoch: {} Test Loss: {} Train Loss: {}'.format(
         x,
         np.format_float_scientific(y,precision=3),
@@ -123,23 +123,37 @@ def train(
             model_optimizer.step()  
             data_iterator.set_description(desc_genr(i,test_loss,np.mean(train_loss)))
     
+        if (i+1)%save_freq==0 and savepath is not None:
+            torch.save(model, os.path.join(save_folder,'epoch-{}.dat'.format(i+1)))
         #######################################################################
         # Update test accuracy every `update_freq` number of epochs
         #######################################################################
         if (i+1)%update_freq==0:
-            total_loss = 0.0
-            for index, batch in enumerate(test_data_loader):
-                x,label = batch
-                if cuda:
-                    x = x.cuda()
-                    label = label.cuda()
-                y = model(x)
-                loss = loss_func(y,label.view(-1,1))
-                total_loss += float(loss.item())
-            test_loss = total_loss/(index+1)
+            test_loss = test_model(model,test_data_loader,loss_func,cuda) 
+            
+def test_model(
+        model: torch.nn.Module,
+        data_loader: torch.utils.data.DataLoader,
+        loss_func: Callable[[float,float],None],
+        cuda: Optional[bool] = False):
+    """
+    Return the average loss over the provided dataset.
+    :param model: `torch.nn.Module` to be tested
+    :param data_loader: DataLoader class for the dataset being tested
+    :param loss_func: Loss function to use for measuring error/loss
+    :param cuda: whether to use the cuda device (model should already be moved to GPU)
+    """
+    total_loss = 0.0
+    for index, batch in enumerate(data_loader):
+        x,label = batch
+        if cuda:
+            x = x.cuda()
+            label = label.cuda()
+        y = model(x)
+        loss = loss_func(y,label.view(-1,1))
+        total_loss += float(loss.item())
+    test_loss = total_loss/(index+1)
     
-        if (i+1)%save_freq==0 and savepath is not None:
-            torch.save(model, os.path.join(save_folder,'epoch-{}.dat'.format(i+1)))
             
 
 def _get_parser():
@@ -329,6 +343,12 @@ def _get_parser():
         #help = "set flag for quiet training"
         help = "NOT IMPLEMENTED"
     )
+    parser.add_argument(
+        "--test-model",
+        type = str,
+        choices = ['test','train'],
+        help = ""
+    )
 
     ###########################################################################
     # not implemented
@@ -494,19 +514,26 @@ if __name__ == '__main__':
             device = "cuda" if args.cuda else "cpu"
         )    
 
-    ###########################################################################
-    # And finally, begin training
-    ###########################################################################
-    train(
-        train_ds,
-        test_ds,
-        model,
-        cuda = args.cuda,
-        batch_size = args.batch_size,
-        num_workers = args.workers,
-        epochs = args.epochs,
-        update_freq = args.update_freq,
-        savepath = args.savepath,
-        save_freq = args.save_freq,
-        optimizer = lambda x: torch.optim.Adam(x.parameters(),lr=args.lr)
-    )
+    if args.test_model is not None:
+        run_set = train_ds if args.test_model == 'train' else test_ds
+        data_loader = DataLoader(run_set, num_workers=args.workers,
+                pin_memory=args.cuda, batch_size=args.batch_size,
+                shuffle=True)
+        test_model(model,data_loader,torch.nn.MSELoss,args.cuda)
+    else:
+        ###########################################################################
+        # And finally, begin training
+        ###########################################################################
+        train_model(
+            train_ds,
+            test_ds,
+            model,
+            cuda = args.cuda,
+            batch_size = args.batch_size,
+            num_workers = args.workers,
+            epochs = args.epochs,
+            update_freq = args.update_freq,
+            savepath = args.savepath,
+            save_freq = args.save_freq,
+            optimizer = lambda x: torch.optim.Adam(x.parameters(),lr=args.lr)
+        )
