@@ -114,11 +114,11 @@ def train_model(
                 x = x.cuda()
                 label = label.cuda()
 
+            model_optimizer.zero_grad()
             y = model(x)
             loss = loss_func(y,label.view(-1,1))
             loss_value = float(loss.item())
             train_loss.append(loss_value)
-            model_optimizer.zero_grad()
             loss.backward()
             model_optimizer.step()  
             data_iterator.set_description(desc_genr(i,test_loss,np.mean(train_loss)))
