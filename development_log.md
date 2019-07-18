@@ -201,3 +201,15 @@ Epoch: 49 Test Loss: 4.191e-03 Train Loss: 3.921e-03: 100%███████�
 ```
 
 Note that if it were predicting the mean, loss would be around 5.6e-03.
+
+## 18/07/19
+
+Little more progress has been made on training the model.  I extended the code to load in models to keep training them further.
+The above mentioned model was trained for a further 100 epochs at a slightly lower learning rate (0.00001), and managed to 
+reduce test loss to ~4.01e-03 I believe.  I forgot to save the terminal output, so I will write code to test saved models soon
+to re-assess the perfomance.
+
+I have also been working out how to automatically calculate layer sizes as well as incoporate max/avg pooling in an attempt to
+make model specification easier from the command line script.  I made some pretty silly mistakes due to programming later at night
+so I speant today bug fixing and making sure everything runs smoothly. Will include more information a later time/in the report.
+
