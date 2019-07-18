@@ -204,7 +204,7 @@ Note that if it were predicting the mean, loss would be around 5.6e-03.
 
 ## 18/07/19
 
-Little more progress has been made on training the model.  I extended the code to load in models to keep training them further.
+Little progress has been made on training the model.  I extended the code to load in models to keep training them further.
 The above mentioned model was trained for a further 100 epochs at a slightly lower learning rate (0.00001), and managed to 
 reduce test loss to ~4.01e-03 I believe.  I forgot to save the terminal output, so I will write code to test saved models soon
 to re-assess the perfomance.
@@ -213,3 +213,31 @@ I have also been working out how to automatically calculate layer sizes as well 
 make model specification easier from the command line script.  I made some pretty silly mistakes due to programming later at night
 so I speant today bug fixing and making sure everything runs smoothly. Will include more information a later time/in the report.
 
+## 19/07/19
+
+So this is more of a continuation of last night's entry to expand on a few thoughts. I haven't yet explicitly stated my 
+current approach to this project, so it's probably worth briefly discussing.
+
+My first aim is to develop a generalized framework that will allow me to easily experiment with various Conv3d oriented 
+model architectures using a commandline interface.  
+This is a fairly open ended issue, and I must be careful not to spend too much time on this task alone.
+That said there are a few requirements I feel this must meet.
+* Flexible model architecture -- with little effort I would like to be able to specify the model architecture
+    * Number of layers [ **implemented** ]
+    * Number of filters [ **implemented** ]
+    * Layer parameters (stride, dilation, padding , kernel size, ...) [ **implemented** ]
+    * Activation Functions [ **implemented** ]
+    * Pooling [ **implemented ]
+    * Weight initialization [ **implemented** ]
+    * Skip connections [ *not implemented* ]
+* Training options
+    * Number of epochs [ **implemented** ]
+    * Batch size [ **implemented** ]
+    * Learning rate [ **implemented** ]
+    * GPU trainging [ **implemented** ]
+    * Batch scheudling [ *not implemented* ]
+    * Choice of loss function [ *not implemented* ]
+* And a few other features for ease of use
+    * Model saving/loading [ **implemented** ]
+    * Keep traing previously saved models [ **implemented** ]
+    * Test previouly saved/trained models on specific datasets [ **implemented** ]
