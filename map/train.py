@@ -114,11 +114,11 @@ def train_model(
                 x = x.cuda()
                 label = label.cuda()
 
+            model_optimizer.zero_grad()
             y = model(x)
             loss = loss_func(y,label.view(-1,1))
             loss_value = float(loss.item())
             train_loss.append(loss_value)
-            model_optimizer.zero_grad()
             loss.backward()
             model_optimizer.step()  
             data_iterator.set_description(desc_genr(i,test_loss,np.mean(train_loss)))
@@ -144,15 +144,18 @@ def test_model(
     :param cuda: whether to use the cuda device (model should already be moved to GPU)
     """
     total_loss = 0.0
-    for index, batch in enumerate(data_loader):
-        x,label = batch
-        if cuda:
-            x = x.cuda()
-            label = label.cuda()
-        y = model(x)
-        loss = loss_func(y,label.view(-1,1))
-        total_loss += float(loss.item())
-    test_loss = total_loss/(index+1)
+    # disable gradient calculations to avoid wasting memory
+    with torch.no_grad():
+        for index, batch in enumerate(data_loader):
+            x,label = batch
+            if cuda:
+                x = x.cuda()
+                label = label.cuda()
+            y = model(x)
+            loss = loss_func(y,label.view(-1,1))
+            total_loss += float(loss.item())
+        test_loss = total_loss/(index+1)
+    return test_loss
     
             
 
@@ -500,7 +503,10 @@ if __name__ == '__main__':
     ###########################################################################
     # Move the model to GPU if cuda is requested
     ###########################################################################
-    model = model.cuda() if args.cuda else model
+    if args.cuda:
+        model = model.cuda()
+    else:
+        model = model.cpu()
 
     ###########################################################################
     # Print out model info ...

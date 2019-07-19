@@ -178,7 +178,8 @@ class MAPnet(nn.Module):
             # my attempt to allow for supbooling
             ###################################################################
             if even_padding:
-                preserve = True if stride[i] == 1 else False
+                #preserve = True if stride[i] == 1 else False
+                preserve = False
                 # TODO:
                 # This is really bad... I'm changing types from
                 # int to list/array here.  Find a better/more clear way!
