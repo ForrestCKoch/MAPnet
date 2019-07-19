@@ -503,7 +503,10 @@ if __name__ == '__main__':
     ###########################################################################
     # Move the model to GPU if cuda is requested
     ###########################################################################
-    model = model.cuda() if args.cuda else model
+    if args.cuda:
+        model = model.cuda()
+    else:
+        model = model.cpu()
 
     ###########################################################################
     # Print out model info ...
