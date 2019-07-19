@@ -6,7 +6,7 @@ from datetime import datetime
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-#from torchsummary import summary
+from torchsummary import summary
 from tqdm import tqdm
 
 
