@@ -20,7 +20,7 @@ def train_model(
         model: torch.nn.Module, 
         epochs: Optional[int] = EPOCHS, 
         update_freq: Optional[int] = UPDATE_FREQ,
-        savepath: Optional[str] = SAVEPATH,
+        save_folder: Optional[str] = SAVEPATH,
         save_freq: Optional[int] = SAVE_FREQ,
         batch_size: Optional[int] = BATCH_SIZE, 
         num_workers: Optional[int] = WORKERS, 
@@ -34,22 +34,15 @@ def train_model(
     Train the provided MAPnet model.
 
     Note: 
-    If `savepath` is specified, models will be saved in a new folder
-    named according to the date and time it is run.  If mutliple instances
-    are being run in parallel, each instance should have a different 
-    savepath to avoid overlap.
 
-    Furthermore, if the supplied model has been pre-trained, the naming
-    scheme will not reflect this.  The user should take care to make sure
-    this information is not lost.  I suggest setting savepath to the 
-    datetime folder created in the previous training stage.  This way
-    the model will be grouped with its 'ancestor' models.
 
     :param train_set: Dataset object containing the training data.
     :param test_set: Dataset object containing the test data.
     :param model: `torch.nn.Module` model to be trained.
     :param epoch: The number of epochs to train over.
     :param update_freq: Test set accuracy will be assessed every `update_freq` epochs.
+    :param save_folder: Path for checkpoints to be stored in.
+    :param save_freq: How often checkpoints should be saved.
     :param batch_size: batch size for training.
     :param num_workers: how many workers to use for the DataLoader.
     :param cuda: Whether to use cuda device. Defaults to False.
@@ -89,11 +82,6 @@ def train_model(
     model_optimizer = optimizer(model)
     model_scheduler = scheduler(model) if scheduler is not None else scheduler
 
-    if savepath is not None:
-        save_folder = os.path.join(savepath,datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))    
-        os.makedirs(save_folder)
-    else:
-        save_folder = None
 
     ###########################################################################
     # Start Training Epoch
@@ -123,13 +111,21 @@ def train_model(
             model_optimizer.step()  
             data_iterator.set_description(desc_genr(i,test_loss,np.mean(train_loss)))
     
-        if (i+1)%save_freq==0 and savepath is not None:
+        if (i+1)%save_freq==0 and save_folder is not None:
             torch.save(model, os.path.join(save_folder,'epoch-{}.dat'.format(i+1)))
         #######################################################################
         # Update test accuracy every `update_freq` number of epochs
         #######################################################################
         if (i+1)%update_freq==0:
             test_loss = test_model(model,test_data_loader,loss_func,cuda) 
+        # Record our losses for this epoch
+        with open('loss.csv','a') as fh:
+            print('{},{},{}'.format(str(epoch),
+                np.format_float_scientific(np.mean(train_loss)),
+                np.format_float_scientific(test_loss)
+                ),
+                file=fh
+            )
             
 def test_model(
         model: torch.nn.Module,
@@ -191,7 +187,7 @@ def _get_parser():
         type = str,
         metavar = '[str]',
         default = SAVEPATH,
-        help = "folder where model checkpoints should be saved -- if None model will not be saved "
+        help = "folder where model checkpoints should be saved -- if None model will not be saved. If savepath is specified, models will be saved in a new folder named according to the date and time it is run.  If mutliple instances are being run in parallel, each instance should have a different savepath to avoid overlap."
     )
     parser.add_argument(
         "--save-freq",
@@ -423,6 +419,7 @@ if __name__ == '__main__':
         print_network_size(args)
         exit()
 
+
     ###########################################################################
     # Loading Training Data
     ###########################################################################
@@ -528,6 +525,14 @@ if __name__ == '__main__':
         test_model(model,data_loader,torch.nn.MSELoss,args.cuda)
     else:
         ###########################################################################
+        # Setup our save location
+        ###########################################################################
+        if args.savepath is not None:
+            save_folder = os.path.join(args.savepath,datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))    
+            os.makedirs(save_folder)
+        else:
+            save_folder = None
+        ###########################################################################
         # And finally, begin training
         ###########################################################################
         train_model(
@@ -539,7 +544,7 @@ if __name__ == '__main__':
             num_workers = args.workers,
             epochs = args.epochs,
             update_freq = args.update_freq,
-            savepath = args.savepath,
+            save_folder = save_folder,
             save_freq = args.save_freq,
             optimizer = lambda x: torch.optim.Adam(x.parameters(),lr=args.lr)
         )
