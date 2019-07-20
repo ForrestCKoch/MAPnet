@@ -336,10 +336,10 @@ def _get_parser():
         type=float,
         metavar='[float]',
         default=DECAY,
-        help="learning rate decay (multiplicative factor).  Unless '--reduce-on-plataeu is set, this decay rate is applied every epoch" 
+        help="learning rate decay (multiplicative factor).  Unless '--reduce-on-plateau is set, this decay rate is applied every epoch" 
     )
     parser.add_argument(
-        "--reduce-on-plataeu",
+        "--reduce-on-plateau",
         action="store_true",
         help="learning rate will decay after performance on the train set plateaus as opposed to every epoch"
     )
@@ -474,7 +474,7 @@ if __name__ == '__main__':
         print('')
         print('{} was called with arguments:'.format(sys.argv[0]))
         for arg in vars(args):
-            print('{0:16}{1}'.format(arg+':',getattr(args,arg)))
+            print('{0:20}{1}'.format(arg+':',getattr(args,arg)))
         print('')
 
 
@@ -610,7 +610,7 @@ if __name__ == '__main__':
             # Record the arguments for this program call in the save_folder
             with open(os.path.join(save_folder,'arguments.txt'),'w') as fh:
                 for arg in vars(args):
-                    print('{0:16}{1}'.format(arg+':',getattr(args,arg)),file=fh)
+                    print('{0:20}{1}'.format(arg+':',getattr(args,arg)),file=fh)
         else:
             save_folder = None
         ###########################################################################
