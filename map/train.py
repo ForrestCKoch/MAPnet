@@ -124,11 +124,11 @@ def train_model(
         #######################################################################
         # Update the learning rate if we've been supplied a scheduler
         #######################################################################
-        if scheduler is not None:
-            if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                scheduler.step(float(np.mean(train_loss)))
+        if model_scheduler is not None:
+            if isinstance(model_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                model_scheduler.step(float(np.mean(train_loss)))
             else:
-                scheduler.step()
+                model_scheduler.step()
     
         #######################################################################
         # Save the model when requested
@@ -145,7 +145,7 @@ def train_model(
         #######################################################################
         # Record our losses for this epoch
         #######################################################################
-        with open(os.path.join(save_folder,'loss.csv','a')) as fh:
+        with open(os.path.join(save_folder,'loss.csv'),'a') as fh:
             print('{},{},{}'.format(str(epoch),
                 np.format_float_scientific(np.mean(train_loss), precision=5),
                 np.format_float_scientific(test_loss, precision=5)
