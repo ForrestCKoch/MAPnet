@@ -277,9 +277,11 @@ class MAPnet(nn.Module):
                 else self.conv_layer_sizes[-1]
         self.fc_input_size  = int(np.prod(layer_size))*self.n_channels[-1]
 
+        """
         print(self.conv_layer_sizes)
         print(self.pool_layer_sizes)
         print(self.fc_input_size)
+        """
 
         fc_layers = list()
 
