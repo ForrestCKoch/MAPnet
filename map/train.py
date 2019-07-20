@@ -77,7 +77,7 @@ def train_model(
     if loss_func is None:
         loss_func = torch.nn.MSELoss()
     if optimizer is None:
-        optimizer = lambda x: torch.optim.Adam(x.parameters(),lr=0.000001)
+        optimizer = lambda x: torch.optim.Adam(x.parameters(),lr=0.001)
 
     model_optimizer = optimizer(model)
     model_scheduler = scheduler(model) if scheduler is not None else scheduler
@@ -131,18 +131,22 @@ def test_model(
         model: torch.nn.Module,
         data_loader: torch.utils.data.DataLoader,
         loss_func: Callable[[float,float],None],
-        cuda: Optional[bool] = False):
+        cuda: Optional[bool] = False,
+        show_progress: Optional[bool] = False,
+    )->float:
     """
     Return the average loss over the provided dataset.
     :param model: `torch.nn.Module` to be tested
     :param data_loader: DataLoader class for the dataset being tested
     :param loss_func: Loss function to use for measuring error/loss
     :param cuda: whether to use the cuda device (model should already be moved to GPU)
+    :param show_progress: whether to use tqdm to show progress of test loop
     """
     total_loss = 0.0
     # disable gradient calculations to avoid wasting memory
+    data_iterator = tqdm(data_loader) if show_progress else data_loader
     with torch.no_grad():
-        for index, batch in enumerate(data_loader):
+        for index, batch in enumerate(data_iterator):
             x,label = batch
             if cuda:
                 x = x.cuda()
@@ -518,11 +522,28 @@ if __name__ == '__main__':
         )    
 
     if args.test_model is not None:
+        ###########################################################################
+        # Run a test of the model instead of a training
+        ###########################################################################
         run_set = train_ds if args.test_model == 'train' else test_ds
-        data_loader = DataLoader(run_set, num_workers=args.workers,
-                pin_memory=args.cuda, batch_size=args.batch_size,
-                shuffle=True)
-        test_model(model,data_loader,torch.nn.MSELoss,args.cuda)
+        data_loader = DataLoader(
+            run_set, 
+            num_workers=args.workers,
+            pin_memory=args.cuda, 
+            batch_size=args.batch_size,
+            shuffle=True
+        )
+        loss = test_model(
+            model,
+            data_loader,
+            torch.nn.MSELoss(),
+            args.cuda,show_progress=True
+        )
+        print("Total loss for the {} set is {}".format(
+                args.test_model,
+                np.format_float_scientific(loss,precision=3)
+            )
+        )
     else:
         ###########################################################################
         # Setup our save location
