@@ -79,17 +79,17 @@ class MAPnet(nn.Module):
     def __init__(
             self, 
             input_shape: Tuple[int,int,int],
-            n_conv_layers: Optional[int] = CONV_LAYERS,
-            padding: Optional[List[int]] = [PADDING],
-            dilation: Optional[List[int]] = [DILATION],
-            kernel: Optional[List[int]] = [KERNEL_SIZE],
-            stride: Optional[List[int]] = [STRIDE],
-            filters: Optional[List[int]] = FILTERS,
-            input_channels: Optional[int] = 1,
-            conv_actv: Optional[List[Callable[[nn.Module],nn.Module]]] = [F.relu],
-            fc_actv: Optional[List[Callable[[nn.Module],nn.Module]]] = [F.relu,F.tanh,F.relu],
-            even_padding: Optional[bool] = False,
-            pool: Optional[str] = None
+            n_conv_layers: Optional[int]=CONV_LAYERS,
+            padding: Optional[List[int]]=[PADDING],
+            dilation: Optional[List[int]]=[DILATION],
+            kernel: Optional[List[int]]=[KERNEL_SIZE],
+            stride: Optional[List[int]]=[STRIDE],
+            filters: Optional[List[int]]=FILTERS,
+            input_channels: Optional[int]=1,
+            conv_actv: Optional[List[Callable[[nn.Module],nn.Module]]]=[F.relu],
+            fc_actv: Optional[List[Callable[[nn.Module],nn.Module]]]=[F.relu,F.tanh,F.relu],
+            even_padding: Optional[bool]=False,
+            pool: Optional[str]=None
         ):
         """
         Initialize an instance of MAPnet.
@@ -230,15 +230,15 @@ class MAPnet(nn.Module):
 
             conv_layers.append(
                 nn.Conv3d(
-                    in_channels = int(self.n_channels[-2]), 
-                    out_channels = int(self.n_channels[-1]), 
-                    kernel_size = kernel[i], 
-                    stride = stride[i], 
-                    padding = 0 if even_padding else padding[i], 
-                    dilation = dilation[i], 
-                    groups = int(self.n_channels[-2]), 
-                    bias = True, 
-                    padding_mode = 'zeros'
+                    in_channels=int(self.n_channels[-2]), 
+                    out_channels=int(self.n_channels[-1]), 
+                    kernel_size=kernel[i], 
+                    stride=stride[i], 
+                    padding=0 if even_padding else padding[i], 
+                    dilation=dilation[i], 
+                    groups=int(self.n_channels[-2]), 
+                    bias=True, 
+                    padding_mode='zeros'
                 )
             )
             if self.pool:

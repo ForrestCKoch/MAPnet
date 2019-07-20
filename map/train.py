@@ -1,6 +1,7 @@
 from typing import Any, Optional, Callable
 import argparse
 import os
+import sys
 from datetime import datetime
 
 import numpy as np
@@ -18,17 +19,17 @@ def train_model(
         train_set: torch.utils.data.Dataset, 
         test_set: torch.utils.data.Dataset, 
         model: torch.nn.Module, 
-        epochs: Optional[int] = EPOCHS, 
-        update_freq: Optional[int] = UPDATE_FREQ,
-        save_folder: Optional[str] = SAVEPATH,
-        save_freq: Optional[int] = SAVE_FREQ,
-        batch_size: Optional[int] = BATCH_SIZE, 
-        num_workers: Optional[int] = WORKERS, 
-        cuda: Optional[bool] = CUDA, 
-        loss_func: Optional[Callable[[float,float],None]] = None, 
+        epochs: Optional[int]=EPOCHS, 
+        update_freq: Optional[int]=UPDATE_FREQ,
+        save_folder: Optional[str]=SAVEPATH,
+        save_freq: Optional[int]=SAVE_FREQ,
+        batch_size: Optional[int]=BATCH_SIZE, 
+        num_workers: Optional[int]=WORKERS, 
+        cuda: Optional[bool]=CUDA, 
+        loss_func: Optional[Callable[[float,float],None]]=None, 
         optimizer: Optional[Callable[[torch.nn.Module],torch.optim.Optimizer]]=None, 
-        scheduler: Optional[Callable[[int, torch.nn.Module],None]] = None,
-        silent: Optional[bool] = False
+        scheduler: Optional[Callable[[int, torch.nn.Module],None]]=None,
+        silent: Optional[bool]=False
     ) -> None:
     """
     Train the provided MAPnet model.
@@ -64,8 +65,8 @@ def train_model(
 
     desc_genr = lambda x,y,z: 'Epoch: {} Test Loss: {} Train Loss: {}'.format(
         x,
-        np.format_float_scientific(y,precision=3),
-        np.format_float_scientific(z,precision=3)
+        np.format_float_scientific(y, precision=3),
+        np.format_float_scientific(z, precision=3)
     )
     test_loss = 0.0
 
@@ -119,10 +120,10 @@ def train_model(
         if (i+1)%update_freq==0:
             test_loss = test_model(model,test_data_loader,loss_func,cuda) 
         # Record our losses for this epoch
-        with open('loss.csv','a') as fh:
+        with open(os.path.join(save_folder,'loss.csv','a')) as fh:
             print('{},{},{}'.format(str(epoch),
-                np.format_float_scientific(np.mean(train_loss)),
-                np.format_float_scientific(test_loss)
+                np.format_float_scientific(np.mean(train_loss), precision=5),
+                np.format_float_scientific(test_loss, precision=5)
                 ),
                 file=fh
             )
@@ -131,8 +132,8 @@ def test_model(
         model: torch.nn.Module,
         data_loader: torch.utils.data.DataLoader,
         loss_func: Callable[[float,float],None],
-        cuda: Optional[bool] = False,
-        show_progress: Optional[bool] = False,
+        cuda: Optional[bool]=False,
+        show_progress: Optional[bool]=False,
     )->float:
     """
     Return the average loss over the provided dataset.
@@ -166,191 +167,191 @@ def _get_parser():
     ###########################################################################
     parser.add_argument(
         "--datapath",
-        type = str,
-        metavar = '[str]',
-        default = DATAPATH,
-        help = "path to data folder"
+        type=str,
+        metavar='[str]',
+        default=DATAPATH,
+        help="path to data folder"
     )
     parser.add_argument(
         "--scale-inputs",
         action="store_true",
-        help = "set flag to scale input images"
+        help="set flag to scale input images"
     )
     parser.add_argument(
         "--workers",
-        type = int,
-        metavar = '[int]',
-        default = WORKERS,
-        help = "number of workers in DataLoader"
+        type=int,
+        metavar='[int]',
+        default=WORKERS,
+        help="number of workers in DataLoader"
     )
     ###########################################################################
     # Loading/Saving
     ###########################################################################
     parser.add_argument(
         "--savepath",
-        type = str,
-        metavar = '[str]',
-        default = SAVEPATH,
-        help = "folder where model checkpoints should be saved -- if None model will not be saved. If savepath is specified, models will be saved in a new folder named according to the date and time it is run.  If mutliple instances are being run in parallel, each instance should have a different savepath to avoid overlap."
+        type=str,
+        metavar='[str]',
+        default=SAVEPATH,
+        help="folder where model checkpoints should be saved -- if None model will not be saved. If savepath is specified, models will be saved in a new folder named according to the date and time it is run.  If mutliple instances are being run in parallel, each instance should have a different savepath to avoid overlap."
     )
     parser.add_argument(
         "--save-freq",
-        type = str,
-        metavar = '[str]',
-        default = SAVE_FREQ,
-        help = "how often model checkpoints should be saved (in epochs) "
+        type=str,
+        metavar='[str]',
+        default=SAVE_FREQ,
+        help="how often model checkpoints should be saved (in epochs) "
     )
     parser.add_argument(
         "--load-model",
-        type = str,
-        default = None,
-        help = "Specify a saved model to load and train.  Other arguments relating to model paremeters (padding, kernel-size, etc..) will be ignored.  Training parameters (learning rate, update frequency, etc ...) may still be specified."
+        type=str,
+        default=None,
+        help="Specify a saved model to load and train.  Other arguments relating to model paremeters (padding, kernel-size, etc..) will be ignored.  Training parameters (learning rate, update frequency, etc ...) may still be specified."
     )
     ###########################################################################
     # Model Architecture Options
     ###########################################################################
     parser.add_argument(
         "--conv-layers",
-        type = int,
-        metavar = '[int]',
-        default = CONV_LAYERS,
-        help = "number of Conv3d layers"
+        type=int,
+        metavar='[int]',
+        default=CONV_LAYERS,
+        help="number of Conv3d layers"
     )
     parser.add_argument(
         "--kernel-size",
-        type = int,
-        nargs = '+',
-        metavar = 'int',
-        default = KERNEL_SIZE,
-        help = "kernel size of each filter"
+        type=int,
+        nargs='+',
+        metavar='int',
+        default=KERNEL_SIZE,
+        help="kernel size of each filter"
     )
     parser.add_argument(
         "--dilation",
-        type = int,
-        nargs = '+',
-        metavar = 'int',
-        default = DILATION,
-        help = "dilation factor for each filter"
+        type=int,
+        nargs='+',
+        metavar='int',
+        default=DILATION,
+        help="dilation factor for each filter"
     )
     parser.add_argument(
         "--padding",
-        type = int,
-        nargs = '+',
-        metavar = 'int',
-        default = PADDING,
-        help = "zero padding to be used in Conv3d layers"
+        type=int,
+        nargs='+',
+        metavar='int',
+        default=PADDING,
+        help="zero padding to be used in Conv3d layers"
     )
     parser.add_argument(
         "--even-padding",
-        action = "store_true",
-        help = "Calculate padding vectors to ensure even perfect overlap with kernel applications.  Layers with stride = 1 will have input dimensions preserved.  The '--padding' argument is ignored when this flag is set"
+        action="store_true",
+        help="Calculate padding vectors to ensure even perfect overlap with kernel applications.  Layers with stride = 1 will have input dimensions preserved.  The '--padding' argument is ignored when this flag is set"
     )
     parser.add_argument(
         "--stride",
-        type = int,
-        nargs = '+',
-        metavar = 'int',
-        default = STRIDE,
-        help = "stride between filter applications"
+        type=int,
+        nargs='+',
+        metavar='int',
+        default=STRIDE,
+        help="stride between filter applications"
     )
     parser.add_argument(
         "--filters",
-        nargs = '+',
-        type = int,
-        metavar = 'int',
-        default = [4,4,4],
-        help = "filters to apply to each channel -- one entry per layer"
+        nargs='+',
+        type=int,
+        metavar='int',
+        default=[4,4,4],
+        help="filters to apply to each channel -- one entry per layer"
     )
     parser.add_argument(
         "--weight-init",
-        type = str,
-        metavar = '[str]',
-        default = WEIGHT_INIT,
-        choices = winit_funcs.keys(),
-        help = "weight initialization method [{}]".format(', '.join(winit_funcs.keys()))
+        type=str,
+        metavar='[str]',
+        default=WEIGHT_INIT,
+        choices=winit_funcs.keys(),
+        help="weight initialization method [{}]".format(', '.join(winit_funcs.keys()))
     )
     parser.add_argument(
         "--conv-actv",
-        type = str,
-        nargs = '+',
-        metavar = 'str',
-        default = CONV_ACTV_ARG,
-        choices = actv_funcs.keys(),
-        help = "activation functions to be used in convolutional layers -- must be 1 or n_conv_layers [{}]".format(', '.join(actv_funcs.keys()))
+        type=str,
+        nargs='+',
+        metavar='str',
+        default=CONV_ACTV_ARG,
+        choices=actv_funcs.keys(),
+        help="activation functions to be used in convolutional layers -- must be 1 or n_conv_layers [{}]".format(', '.join(actv_funcs.keys()))
     )
     parser.add_argument(
         "--fc-actv",
-        type = str,
-        nargs = '+',
-        metavar = 'str',
-        default = CONV_ACTV_ARG,
-        choices = actv_funcs.keys(),
-        help = "activation functions to be used in convolutional layers -- must be 1 or n_conv_layers [{}]".format(', '.join(actv_funcs.keys()))
+        type=str,
+        nargs='+',
+        metavar='str',
+        default=CONV_ACTV_ARG,
+        choices=actv_funcs.keys(),
+        help="activation functions to be used in convolutional layers -- must be 1 or n_conv_layers [{}]".format(', '.join(actv_funcs.keys()))
     )
     parser.add_argument(
         "--pooling",
-        type = str,
-        choices = ['max','avg'],
-        metavar = '[str]',
-        default = None,
-        help = "which pooling method to apply in between convolution layers.  If this argument is not specified, then no pooling will be performed"
+        type=str,
+        choices=['max','avg'],
+        metavar='[str]',
+        default=None,
+        help="which pooling method to apply in between convolution layers.  If this argument is not specified, then no pooling will be performed"
     )
     ###########################################################################
     #  Training Options
     ###########################################################################
     parser.add_argument(
         "--lr",
-        type = float,
-        metavar = '[float]',
-        default = LEARNING_RATE,
-        help = "learning rate paramater"
+        type=float,
+        metavar='[float]',
+        default=LEARNING_RATE,
+        help="learning rate paramater"
     )
     parser.add_argument(
         "--batch-size",
-        type = int,
-        metavar = '[int]',
-        default = 32,
-        help = "number of samples per batch"
+        type=int,
+        metavar='[int]',
+        default=32,
+        help="number of samples per batch"
     )
     parser.add_argument(
         "--epochs",
-        type = int,
-        metavar = '[int]',
-        default = EPOCHS,
-        help = "number of epochs to train over"
+        type=int,
+        metavar='[int]',
+        default=EPOCHS,
+        help="number of epochs to train over"
     )
     parser.add_argument(
         "--update-freq",
-        type = int,
-        metavar = '[int]',
-        default = UPDATE_FREQ,
-        help = "how often (in epochs) to asses test set accuracy"
+        type=int,
+        metavar='[int]',
+        default=UPDATE_FREQ,
+        help="how often (in epochs) to asses test set accuracy"
     )
     parser.add_argument(
         "--cuda",
         action="store_true",
-        help = "set flag to use cuda device(s)"
+        help="set flag to use cuda device(s)"
     )
     ###########################################################################
     # Misc. Options
     ###########################################################################
     parser.add_argument(
         "--debug-size",
-        type = int,
-        nargs = 4, 
-        help = "Print out the expected architecture.  4 Integers should be supplied to this argument [channels, dimx, dimy, dimz].  Program execution will terminate afterwards"
+        type=int,
+        nargs=4, 
+        help="Print out the expected architecture.  4 Integers should be supplied to this argument [channels, dimx, dimy, dimz].  Program execution will terminate afterwards"
     )
     parser.add_argument(
         "--silent",
-        action = "store_true",
-        #help = "set flag for quiet training"
-        help = "NOT IMPLEMENTED"
+        action="store_true",
+        #help="set flag for quiet training"
+        help="NOT IMPLEMENTED"
     )
     parser.add_argument(
         "--test-model",
-        type = str,
-        choices = ['test','train'],
-        help = ""
+        type=str,
+        choices=['test','train'],
+        help=""
     )
 
     ###########################################################################
@@ -359,8 +360,8 @@ def _get_parser():
     parser.add_argument(
         "--encode-age",
         action="store_true",
-        #help = "set flag to encode age in a binary vector"
-        help = "NOT IMPLEMENTED"
+        #help="set flag to encode age in a binary vector"
+        help="NOT IMPLEMENTED"
     )
     
 
@@ -422,6 +423,20 @@ if __name__ == '__main__':
     if args.debug_size:
         print_network_size(args)
         exit()
+    ###########################################################################
+    # Preamble
+    ###########################################################################
+    if not args.silent:
+        print('')
+        print('================================================================')
+        print('| MAPnnet -- MRI Age Prediction neural network                 |')
+        print('|    Forrest Koch (forrest.koch@unsw.edu.au)                   |')
+        print('================================================================')
+        print('')
+        print('{} was called with arguments:'.format(sys.argv[0]))
+        for arg in vars(args):
+            print('{0:16}{1}'.format(arg+':',getattr(args,arg)))
+        print('')
 
 
     ###########################################################################
@@ -430,17 +445,17 @@ if __name__ == '__main__':
     if not args.silent:
         print("Fetching training data ...")
     train_dict = get_sample_dict(
-        datapath = args.datapath,
+        datapath=args.datapath,
         dataset='train'
     )
     train_ages = get_sample_ages(
-        ids = train_dict.keys(),
-        path_to_csv = os.path.join(args.datapath,'subject_info.csv')
+        ids=train_dict.keys(),
+        path_to_csv=os.path.join(args.datapath,'subject_info.csv')
     )
     train_ds = NiftiDataset(
-        samples = train_dict,
-        labels = train_ages/100, # divide by 100 for faster learning!?
-        scale_inputs = args.scale_inputs
+        samples=train_dict,
+        labels=train_ages/100, # divide by 100 for faster learning!?
+        scale_inputs=args.scale_inputs
     )
 
     ###########################################################################
@@ -449,18 +464,18 @@ if __name__ == '__main__':
     if not args.silent:
         print("Fetching test data ...")
     test_dict = get_sample_dict(
-        datapath = args.datapath,
-        dataset = 'test'
+        datapath=args.datapath,
+        dataset='test'
         )
     test_ages = get_sample_ages(
-        ids = test_dict.keys(),
-        path_to_csv = os.path.join(args.datapath,'subject_info.csv')
+        ids=test_dict.keys(),
+        path_to_csv=os.path.join(args.datapath,'subject_info.csv')
     )
     test_ds = NiftiDataset(
-        samples = test_dict,
-        labels = test_ages/100, # divide by 100 for faster learning!?
-        scale_inputs = args.scale_inputs,
-        cache_images = False
+        samples=test_dict,
+        labels=test_ages/100, # divide by 100 for faster learning!?
+        scale_inputs=args.scale_inputs,
+        cache_images=False
     )
 
     ###########################################################################
@@ -470,18 +485,18 @@ if __name__ == '__main__':
         if not args.silent:
             print("Initializing model ...")
         model = MAPnet(
-            input_shape = train_ds.image_shape,
-            n_conv_layers = args.conv_layers,
-            padding = args.padding,
-            dilation = args.dilation,
-            kernel = args.kernel_size,
-            stride = args.stride,
-            filters = args.filters,
-            input_channels = train_ds.images_per_subject,
-            conv_actv = [actv_funcs[x] for x in args.conv_actv],
-            fc_actv = [actv_funcs[x] for x in args.fc_actv],
-            even_padding = args.even_padding,
-            pool = args.pooling
+            input_shape=train_ds.image_shape,
+            n_conv_layers=args.conv_layers,
+            padding=args.padding,
+            dilation=args.dilation,
+            kernel=args.kernel_size,
+            stride=args.stride,
+            filters=args.filters,
+            input_channels=train_ds.images_per_subject,
+            conv_actv=[actv_funcs[x] for x in args.conv_actv],
+            fc_actv=[actv_funcs[x] for x in args.fc_actv],
+            even_padding=args.even_padding,
+            pool=args.pooling
         )
         ###########################################################################
         # Weight Initializaiton
@@ -549,8 +564,14 @@ if __name__ == '__main__':
         # Setup our save location
         ###########################################################################
         if args.savepath is not None:
-            save_folder = os.path.join(args.savepath,datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))    
+            save_folder = os.path.join(
+                args.savepath,datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+            )    
             os.makedirs(save_folder)
+            # Record the arguments for this program call in the save_folder
+            with open(os.path.join(save_folder,'arguments.txt'),'w') as fh:
+                for arg in vars(args):
+                    print('{0:16}{1}'.format(arg+':',getattr(args,arg)),file=fh)
         else:
             save_folder = None
         ###########################################################################
@@ -560,12 +581,12 @@ if __name__ == '__main__':
             train_ds,
             test_ds,
             model,
-            cuda = args.cuda,
-            batch_size = args.batch_size,
-            num_workers = args.workers,
-            epochs = args.epochs,
-            update_freq = args.update_freq,
-            save_folder = save_folder,
-            save_freq = args.save_freq,
-            optimizer = lambda x: torch.optim.Adam(x.parameters(),lr=args.lr)
+            cuda=args.cuda,
+            batch_size=args.batch_size,
+            num_workers=args.workers,
+            epochs=args.epochs,
+            update_freq=args.update_freq,
+            save_folder=save_folder,
+            save_freq=args.save_freq,
+            optimizer=lambda x: torch.optim.Adam(x.parameters(),lr=args.lr)
         )
