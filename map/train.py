@@ -93,7 +93,7 @@ def train_model(
             model_scheduler.step()
         data_iterator = tqdm(
             train_data_loader,
-            desc=desc_genr(i,test_loss,0,optimizer.param_groups[0]['lr']),
+            desc=desc_genr(i,test_loss,0,model_optimizer.param_groups[0]['lr']),
             disable=silent
         )
 
@@ -118,7 +118,7 @@ def train_model(
                 i,
                 test_loss,
                 np.mean(train_loss),
-                optimizer.param_groups[0]['lr']
+                model_optimizer.param_groups[0]['lr']
             ))
 
         #######################################################################
