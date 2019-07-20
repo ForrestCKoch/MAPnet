@@ -636,6 +636,6 @@ if __name__ == '__main__':
                 ) if args.reduce_on_plateau else \
                 torch.optim.lr_scheduler.ExponentialLR(
                     x,
-                    lr_lambda=args.decay
+                    gamma=args.decay
                 )
         )
