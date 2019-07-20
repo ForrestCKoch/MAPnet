@@ -36,7 +36,6 @@ def train_model(
 
     Note: 
 
-
     :param train_set: Dataset object containing the training data.
     :param test_set: Dataset object containing the test data.
     :param model: `torch.nn.Module` model to be trained.
@@ -63,10 +62,11 @@ def train_model(
             pin_memory=cuda, batch_size=batch_size,
             shuffle=True)
 
-    desc_genr = lambda x,y,z: 'Epoch: {} Test Loss: {} Train Loss: {}'.format(
+    desc_genr = lambda x,y,z,lr: 'Epoch: {} Test Loss: {} Train Loss: {} LR:'.format(
         x,
         np.format_float_scientific(y, precision=3),
-        np.format_float_scientific(z, precision=3)
+        np.format_float_scientific(z, precision=3),
+        np.format_float_scientific(lr,precision=3)
     )
     test_loss = 0.0
 
@@ -91,7 +91,11 @@ def train_model(
 
         if model_scheduler is not None:
             model_scheduler.step()
-        data_iterator = tqdm(train_data_loader,desc=desc_genr(i,test_loss,0),disable=silent)
+        data_iterator = tqdm(
+            train_data_loader,
+            desc=desc_genr(i,test_loss,0,optimizer.param_groups[0]['lr']),
+            disable=silent
+        )
 
         train_loss = list()
         #######################################################################
@@ -110,16 +114,37 @@ def train_model(
             train_loss.append(loss_value)
             loss.backward()
             model_optimizer.step()  
-            data_iterator.set_description(desc_genr(i,test_loss,np.mean(train_loss)))
+            data_iterator.set_description(desc_genr(
+                i,
+                test_loss,
+                np.mean(train_loss),
+                optimizer.param_groups[0]['lr']
+            ))
+
+        #######################################################################
+        # Update the learning rate if we've been supplied a scheduler
+        #######################################################################
+        if scheduler is not None:
+            if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                scheduler.step(float(np.mean(train_loss)))
+            else:
+                scheduler.step()
     
+        #######################################################################
+        # Save the model when requested
+        #######################################################################
         if (i+1)%save_freq==0 and save_folder is not None:
             torch.save(model, os.path.join(save_folder,'epoch-{}.dat'.format(i+1)))
+
         #######################################################################
         # Update test accuracy every `update_freq` number of epochs
         #######################################################################
         if (i+1)%update_freq==0:
             test_loss = test_model(model,test_data_loader,loss_func,cuda) 
+
+        #######################################################################
         # Record our losses for this epoch
+        #######################################################################
         with open(os.path.join(save_folder,'loss.csv','a')) as fh:
             print('{},{},{}'.format(str(epoch),
                 np.format_float_scientific(np.mean(train_loss), precision=5),
@@ -307,10 +332,22 @@ def _get_parser():
         help="learning rate paramater"
     )
     parser.add_argument(
+        "--decay",
+        type=float,
+        metavar='[float]',
+        default=DECAY,
+        help="learning rate decay (multiplicative factor).  Unless '--reduce-on-plataeu is set, this decay rate is applied every epoch" 
+    )
+    parser.add_argument(
+        "--reduce-on-plataeu",
+        action="store_true",
+        help="learning rate will decay after performance on the train set plateaus as opposed to every epoch"
+    )
+    parser.add_argument(
         "--batch-size",
         type=int,
         metavar='[int]',
-        default=32,
+        default=BATCH_SIZE,
         help="number of samples per batch"
     )
     parser.add_argument(
@@ -350,8 +387,10 @@ def _get_parser():
     parser.add_argument(
         "--test-model",
         type=str,
+        metavar='[str]',
         choices=['test','train'],
-        help=""
+        default=None,
+        help="Instead of training the loaded model, it's performance will be assessed on either the test or train set"
     )
 
     ###########################################################################
@@ -588,5 +627,15 @@ if __name__ == '__main__':
             update_freq=args.update_freq,
             save_folder=save_folder,
             save_freq=args.save_freq,
-            optimizer=lambda x: torch.optim.Adam(x.parameters(),lr=args.lr)
+            optimizer=lambda x: torch.optim.Adam(x.parameters(),lr=args.lr),
+            scheduler=lambda x: torch.optim.lr_scheduler.ReduceLROnPlateau(
+                    x, 
+                    factor=args.decay,
+                    patience=10,
+                    threshold=1e-04
+                ) if args.reduce_on_plateau else \
+                torch.optim.lr_scheduler.ExponentialLR(
+                    x,
+                    lr_lambda=args.decay
+                )
         )

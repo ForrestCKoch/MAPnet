@@ -3,6 +3,7 @@ CONV_ACTV_ARG = ['relu']
 CONV_LAYERS = 3
 CUDA = False
 DATAPATH = 'data'
+DECAY = 1.0
 DILATION = [1]
 ENCODE_AGE = False
 EPOCHS = 20
