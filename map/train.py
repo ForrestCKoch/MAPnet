@@ -81,7 +81,7 @@ def train_model(
         optimizer = lambda x: torch.optim.Adam(x.parameters(),lr=0.001)
 
     model_optimizer = optimizer(model)
-    model_scheduler = scheduler(model) if scheduler is not None else scheduler
+    model_scheduler = scheduler(model_optimizer) if scheduler is not None else scheduler
 
 
     ###########################################################################
