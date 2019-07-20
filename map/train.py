@@ -62,7 +62,7 @@ def train_model(
             pin_memory=cuda, batch_size=batch_size,
             shuffle=True)
 
-    desc_genr = lambda x,y,z,lr: 'Epoch: {} Test Loss: {} Train Loss: {} LR:'.format(
+    desc_genr = lambda x,y,z,lr: 'Epoch: {} Test Loss: {} Train Loss: {} LR: {}'.format(
         x,
         np.format_float_scientific(y, precision=3),
         np.format_float_scientific(z, precision=3),
