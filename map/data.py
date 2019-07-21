@@ -6,6 +6,8 @@ from torch.utils.data import Dataset
 import numpy as np
 import nibabel as nib
 
+from scipy.ndimage import gaussian_filter1d
+
 
 def get_sample_dict(
         datapath: str,
@@ -74,11 +76,32 @@ def encode_age_nonordinal(
     it is less than x_i, but greater than x_{i-1}. Thus the first bin
     will capture all values [-inf,x_1], and the n+1th bin will
     capture all values [x_n,inf]
+    :param age: age to be encoded
+    :param bins: List of bin boundaries 
     """
     upr_bins = np.append(bins,np.inf)
     lwr_bins = np.roll(upr_bins,1)
     lwr_bins[0] = np.NINF
     return torch.Tensor(np.array((age >= lwr_bins)*(age < upr_bins),dtype=np.float32))
+
+def encode_smooth_age(
+        age: int,
+        bins: np.ndarray,
+        sigma: Optional[float] = 0.7
+    )->torch.Tensor:
+    """
+    First uses `encode_age_nonordinal` to construct an embedding, and then applies
+    a 1d Gaussian filter with parameter `sigma` to smooth the ages.
+    :param age: age to be encoded
+    :param bins: List of bin boundaries 
+    :param sigma: parameter for gaussian filter
+    """
+    return torch.Tensor(gaussian_filter1d(
+        encode_age_nonordinal(age,bins),
+        sigma,
+        mode='constant',
+        cval=0
+    ))
     
 
 def check_subject_folder(path):
