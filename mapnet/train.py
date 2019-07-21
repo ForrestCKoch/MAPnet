@@ -6,6 +6,7 @@ from datetime import datetime
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torchsummary import summary
 from tqdm import tqdm
@@ -23,6 +24,32 @@ loss_funcs = {
     'SmoothL1':torch.nn.SmoothL1Loss,
     'BCE':torch.nn.BCELoss,
 }
+
+class WassersteinLoss(torch.autograd.Function):
+    def __init__(
+            self,
+            p:Optional[int]=1,
+            softmax:Optional[bool]=False,
+            reduction:Optional[str]='sum'):
+        """
+        Implement Wasserstein Loss
+        """
+        super(WassersteinLoss,self).__init__()
+        if p == 1:
+            self.cdf_loss = F.l1_loss
+        else:
+            self.cdf_loss = F.mse_loss
+        self.softmax = softmax
+        self.reduction = reduction
+
+    def forward(ctx, inputs, targets):
+        size = inputs.shape[1]
+        weights = np.triu(np.zeros((size,size))+1,k=0)
+        if self.softmax:
+            inputs = F.softmax(inputs)
+        cdf_inputs = F.linear(inputs,weights)
+        cdf_targets = F.linear(targets,weights)
+        return self.cdf_loss(cdf_inputs,cdf_targets,reduction=self.reduction)
 
 def train_model(
         train_set: torch.utils.data.Dataset, 
