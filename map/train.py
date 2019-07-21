@@ -146,7 +146,12 @@ def train_model(
         # Record our losses for this epoch
         #######################################################################
         with open(os.path.join(save_folder,'loss.csv'),'a') as fh:
-            print('{},{},{}'.format(str(epoch),
+            print('{},{},{},{}'.format( #epoch,LR,train_loss,test_loss
+                str(i),
+                np.format_float_scientific(
+                    model_optimizer.param_groups[0]['lr'],
+                    precision=5,
+                ),
                 np.format_float_scientific(np.mean(train_loss), precision=5),
                 np.format_float_scientific(test_loss, precision=5)
                 ),
