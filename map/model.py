@@ -140,7 +140,7 @@ class MAPnet(nn.Module):
             raise ValueError("stride arguments has incorrect length")
         elif not ((len(fc_actv) == 1) or (len(fc_actv) == 3)):
             raise ValueError("conv_actv arguments has incorrect length")
-        elif not (output_size > 1):
+        elif not (output_size > 0):
             raise ValueError("Invalid output_size: {}".format(output_size))
         
         super(MAPnet,self).__init__()
@@ -289,7 +289,7 @@ class MAPnet(nn.Module):
         """
 
         fc_layers = list()
-
+        self.output_size = output_size
         fc_layers.append(nn.Linear(self.fc_input_size,int(self.fc_input_size/2)))
         fc_layers.append(nn.Linear(int(self.fc_input_size/2),100))
         fc_layers.append(nn.Linear(100,output_size))

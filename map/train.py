@@ -118,7 +118,7 @@ def train_model(
 
             model_optimizer.zero_grad()
             y = model(x)
-            loss = loss_func(y,label.view(-1,1))
+            loss = loss_func(y,label.view(batch_size,model.output_size))
             loss_value = float(loss.item())
             train_loss.append(loss_value)
             loss.backward()
@@ -192,7 +192,7 @@ def test_model(
                 x = x.cuda()
                 label = label.cuda()
             y = model(x)
-            loss = loss_func(y,label.view(-1,1))
+            loss = loss_func(y,label.view(data_loader.batch_size,model.output_size))
             total_loss += float(loss.item())
         test_loss = total_loss/(index+1)
     return test_loss
@@ -493,7 +493,7 @@ def convert_targets(targets,option):
     elif option == 'ordinal-class':
         return [encode_age_ordinal(t,np.array(range(35,75))) for t in targets]
     elif option == 'gaussian':
-        return [encode_smooth_age(t,np.array(range(35,75),0.7)) for t in targets]
+        return [encode_smooth_age(t,np.array(range(35,75)),0.7) for t in targets]
     else:
         return targets
             
@@ -533,9 +533,10 @@ if __name__ == '__main__':
         ids=train_dict.keys(),
         path_to_csv=os.path.join(args.datapath,'subject_info.csv')
     )
+    conv_train_ages = convert_targets(train_ages,args.model_output)
     train_ds = NiftiDataset(
         samples=train_dict,
-        labels=convert_targets(train_ages,args.model_output),
+        labels=conv_train_ages,
         scale_inputs=args.scale_inputs
     )
 
@@ -552,9 +553,10 @@ if __name__ == '__main__':
         ids=test_dict.keys(),
         path_to_csv=os.path.join(args.datapath,'subject_info.csv')
     )
+    conv_test_ages = convert_targets(test_ages,args.model_output)
     test_ds = NiftiDataset(
         samples=test_dict,
-        labels=convert_targets(test_ages,args.model_output), 
+        labels=conv_test_ages, 
         scale_inputs=args.scale_inputs,
         cache_images=False
     )
@@ -577,7 +579,8 @@ if __name__ == '__main__':
             conv_actv=[actv_funcs[x] for x in args.conv_actv],
             fc_actv=[actv_funcs[x] for x in args.fc_actv],
             even_padding=args.even_padding,
-            pool=args.pooling
+            pool=args.pooling,
+            output_size=len(conv_train_ages[0])
         )
         ###########################################################################
         # Weight Initializaiton
@@ -595,6 +598,8 @@ if __name__ == '__main__':
             model.even_padding = False
         if not hasattr(model,'pool'):
             model.pool = False
+        if not hasattr(model,'output_size'):
+            model.output_size = 1
 
 
     ###########################################################################
