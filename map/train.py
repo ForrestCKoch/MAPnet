@@ -118,7 +118,7 @@ def train_model(
 
             model_optimizer.zero_grad()
             y = model(x)
-            loss = loss_func(y,label.view(batch_size,model.output_size))
+            loss = loss_func(y,label.view(-1,model.output_size))
             loss_value = float(loss.item())
             train_loss.append(loss_value)
             loss.backward()
@@ -192,7 +192,7 @@ def test_model(
                 x = x.cuda()
                 label = label.cuda()
             y = model(x)
-            loss = loss_func(y,label.view(data_loader.batch_size,model.output_size))
+            loss = loss_func(y,label.view(-1,model.output_size))
             total_loss += float(loss.item())
         test_loss = total_loss/(index+1)
     return test_loss
