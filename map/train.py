@@ -12,8 +12,10 @@ from tqdm import tqdm
 
 
 from defaults import *
-from data import *
-from model import *
+from data import get_sample_dict, get_sample_ages, encode_age_nonordinal, \
+        encode_age_ordinal, encode_smooth_age, NiftiDataset 
+from model import get_out_dims, init_weights, get_even_padding, MAPnet, \
+        winit_funcs, actv_funcs
 
 def train_model(
         train_set: torch.utils.data.Dataset, 
@@ -200,19 +202,19 @@ def _get_parser():
         type=str,
         metavar='[str]',
         default=DATAPATH,
-        help="path to data folder"
+        help="Path to data folder"
     )
     parser.add_argument(
         "--scale-inputs",
         action="store_true",
-        help="set flag to scale input images"
+        help="Set flag to scale input images"
     )
     parser.add_argument(
         "--workers",
         type=int,
         metavar='[int]',
         default=WORKERS,
-        help="number of workers in DataLoader"
+        help="Number of workers in DataLoader"
     )
     ###########################################################################
     # Loading/Saving
@@ -222,14 +224,14 @@ def _get_parser():
         type=str,
         metavar='[str]',
         default=SAVEPATH,
-        help="folder where model checkpoints should be saved -- if None model will not be saved. If savepath is specified, models will be saved in a new folder named according to the date and time it is run.  If mutliple instances are being run in parallel, each instance should have a different savepath to avoid overlap."
+        help="Folder where model checkpoints should be saved -- if None model will not be saved. If savepath is specified, models will be saved in a new folder named according to the date and time it is run.  If mutliple instances are being run in parallel, each instance should have a different savepath to avoid overlap."
     )
     parser.add_argument(
         "--save-freq",
         type=str,
         metavar='[str]',
         default=SAVE_FREQ,
-        help="how often model checkpoints should be saved (in epochs) "
+        help="How often model checkpoints should be saved (in epochs) "
     )
     parser.add_argument(
         "--load-model",
@@ -245,7 +247,7 @@ def _get_parser():
         type=int,
         metavar='[int]',
         default=CONV_LAYERS,
-        help="number of Conv3d layers"
+        help="Number of Conv3d layers"
     )
     parser.add_argument(
         "--kernel-size",
@@ -253,7 +255,7 @@ def _get_parser():
         nargs='+',
         metavar='int',
         default=KERNEL_SIZE,
-        help="kernel size of each filter"
+        help="Kernel size of each filter"
     )
     parser.add_argument(
         "--dilation",
@@ -261,7 +263,7 @@ def _get_parser():
         nargs='+',
         metavar='int',
         default=DILATION,
-        help="dilation factor for each filter"
+        help="Dilation factor for each filter"
     )
     parser.add_argument(
         "--padding",
@@ -269,7 +271,7 @@ def _get_parser():
         nargs='+',
         metavar='int',
         default=PADDING,
-        help="zero padding to be used in Conv3d layers"
+        help="Zero padding to be used in Conv3d layers"
     )
     parser.add_argument(
         "--even-padding",
@@ -282,7 +284,7 @@ def _get_parser():
         nargs='+',
         metavar='int',
         default=STRIDE,
-        help="stride between filter applications"
+        help="Stride between filter applications"
     )
     parser.add_argument(
         "--filters",
@@ -290,7 +292,7 @@ def _get_parser():
         type=int,
         metavar='int',
         default=[4,4,4],
-        help="filters to apply to each channel -- one entry per layer"
+        help="Filters to apply to each channel -- one entry per layer"
     )
     parser.add_argument(
         "--weight-init",
@@ -298,7 +300,7 @@ def _get_parser():
         metavar='[str]',
         default=WEIGHT_INIT,
         choices=winit_funcs.keys(),
-        help="weight initialization method [{}]".format(', '.join(winit_funcs.keys()))
+        help="Weight initialization method [{}]".format(', '.join(winit_funcs.keys()))
     )
     parser.add_argument(
         "--conv-actv",
@@ -307,7 +309,7 @@ def _get_parser():
         metavar='str',
         default=CONV_ACTV_ARG,
         choices=actv_funcs.keys(),
-        help="activation functions to be used in convolutional layers -- must be 1 or n_conv_layers [{}]".format(', '.join(actv_funcs.keys()))
+        help="Activation functions to be used in convolutional layers -- must be 1 or n_conv_layers [{}]".format(', '.join(actv_funcs.keys()))
     )
     parser.add_argument(
         "--fc-actv",
@@ -316,7 +318,7 @@ def _get_parser():
         metavar='str',
         default=CONV_ACTV_ARG,
         choices=actv_funcs.keys(),
-        help="activation functions to be used in convolutional layers -- must be 1 or n_conv_layers [{}]".format(', '.join(actv_funcs.keys()))
+        help="Activation functions to be used in convolutional layers -- must be 1 or n_conv_layers [{}]".format(', '.join(actv_funcs.keys()))
     )
     parser.add_argument(
         "--pooling",
@@ -324,7 +326,15 @@ def _get_parser():
         choices=['max','avg'],
         metavar='[str]',
         default=None,
-        help="which pooling method to apply in between convolution layers.  If this argument is not specified, then no pooling will be performed"
+        help="Which pooling method to apply in between convolution layers.  If this argument is not specified, then no pooling will be performed"
+    )
+    parser.add_argument(
+        "--model-output",
+        type=str,
+        choices=['value','scaled-value','single-class','ordinal-class','gaussian'],
+        metavar='[str]',
+        default='age',
+        help="Specify what type of output the model should produce. 'value': model is trained to predict a single value (e.g age). 'scaled-value': same as 'value', but scaled down by a factor of 100. 'single-class': ages are treated as individual classes to be predited. 'ordinal-class': a class should be predicted if it is <= target age. 'gaussian': model is trained to predict a range of outputs centered around the target age."
     )
     ###########################################################################
     #  Training Options
@@ -334,45 +344,45 @@ def _get_parser():
         type=float,
         metavar='[float]',
         default=LEARNING_RATE,
-        help="learning rate paramater"
+        help="Learning rate paramater"
     )
     parser.add_argument(
         "--decay",
         type=float,
         metavar='[float]',
         default=DECAY,
-        help="learning rate decay (multiplicative factor).  Unless '--reduce-on-plateau is set, this decay rate is applied every epoch" 
+        help="Learning rate decay (multiplicative factor).  Unless '--reduce-on-plateau is set, this decay rate is applied every epoch" 
     )
     parser.add_argument(
         "--reduce-on-plateau",
         action="store_true",
-        help="learning rate will decay after performance on the train set plateaus as opposed to every epoch"
+        help="Learning rate will decay after performance on the train set plateaus as opposed to every epoch"
     )
     parser.add_argument(
         "--batch-size",
         type=int,
         metavar='[int]',
         default=BATCH_SIZE,
-        help="number of samples per batch"
+        help="Number of samples per batch"
     )
     parser.add_argument(
         "--epochs",
         type=int,
         metavar='[int]',
         default=EPOCHS,
-        help="number of epochs to train over"
+        help="Number of epochs to train over"
     )
     parser.add_argument(
         "--update-freq",
         type=int,
         metavar='[int]',
         default=UPDATE_FREQ,
-        help="how often (in epochs) to asses test set accuracy"
+        help="How often (in epochs) to asses test set accuracy"
     )
     parser.add_argument(
         "--cuda",
         action="store_true",
-        help="set flag to use cuda device(s)"
+        help="Set flag to use cuda device(s)"
     )
     ###########################################################################
     # Misc. Options
@@ -386,7 +396,7 @@ def _get_parser():
     parser.add_argument(
         "--silent",
         action="store_true",
-        #help="set flag for quiet training"
+        #help="Set flag for quiet training"
         help="NOT IMPLEMENTED"
     )
     parser.add_argument(
@@ -458,7 +468,18 @@ def print_network_size(args:argparse.ArgumentParser):
     fc = int(np.prod(conv_layer_sizes[-1]))*n_channels[-1]
     print("FC layers: {} -> {} -> 100 -> 1".format(fc,int(fc/2)))
 
-
+def convert_targets(targets,option):
+    choices=['value','scaled-value','single-class','ordinal-class','gaussian'],
+    if option == 'scaled-value':
+        return targets/100
+    elif option == 'single-class':
+        return [encode_age_nonordinal(t,np.array(range(35,75))) for t in targets]
+    elif option == 'ordinal-class':
+        return [encode_age_ordinal(t,np.array(range(35,75))) for t in targets]
+    elif option == 'gaussian':
+        return [encode_smooth_age(t,np.array(range(35,75),0.7)) for t in targets]
+    else:
+        return targets
             
 if __name__ == '__main__': 
     parser = _get_parser()
@@ -498,7 +519,7 @@ if __name__ == '__main__':
     )
     train_ds = NiftiDataset(
         samples=train_dict,
-        labels=train_ages/100, # divide by 100 for faster learning!?
+        labels=convert_targets(train_ages,args.model_output),
         scale_inputs=args.scale_inputs
     )
 
@@ -517,7 +538,7 @@ if __name__ == '__main__':
     )
     test_ds = NiftiDataset(
         samples=test_dict,
-        labels=test_ages/100, # divide by 100 for faster learning!?
+        labels=convert_targets(test_ages,args.model_output), 
         scale_inputs=args.scale_inputs,
         cache_images=False
     )
