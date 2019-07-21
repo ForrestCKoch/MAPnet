@@ -229,13 +229,13 @@ That said there are a few requirements I feel this must meet.
     * Activation Functions [ *implemented* ]
     * Pooling [ *implemented* ]
     * Weight initialization [ *implemented* ]
-    * Skip connections [ **not implemented** ]
+    * Skip connections? [ **not implemented** ]
 * Training options
     * Number of epochs [ *implemented* ]
     * Batch size [ *implemented* ]
     * Learning rate [ *implemented* ]
-    * GPU trainging [ *implemented* ]
-    * Batch scheudling [ **not implemented** ]
+    * GPU training [ *implemented* ]
+    * LR scheduling [ *implemented* ]
     * Choice of loss function [ **not implemented** ]
 * And a few other features for ease of use
     * Model saving/loading [ *implemented* ]
