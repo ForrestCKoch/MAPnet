@@ -229,17 +229,89 @@ That said there are a few requirements I feel this must meet.
     * Activation Functions [ *implemented* ]
     * Pooling [ *implemented* ]
     * Weight initialization [ *implemented* ]
-    * Skip connections? [ **not implemented** ]
+    * Skip connections? [ **not implemented** ] 
 * Training options
     * Number of epochs [ *implemented* ]
     * Batch size [ *implemented* ]
     * Learning rate [ *implemented* ]
     * GPU training [ *implemented* ]
-    * LR scheduling [ *implemented* ]
-    * Choice of loss function [ **not implemented** ]
+    * LR decay [ *implemented* ] 
+    * Choice of loss function [ *implemented* ] 
+* Updated:
 * And a few other features for ease of use
     * Model saving/loading [ *implemented* ]
     * Keep traing previously saved models [ *implemented* ]
     * Test previouly saved/trained models on specific datasets [ *implemented* ]
     * Test/Train accuracy plots [ **not implemented** ]
 
+## 21/07/19
+
+I've modified the above list to reflect what I finished implemented (loss functions and scheduling). I've also added a few
+options regarding the output of the model.
+* Value output -- the standard output I've been using up to now.  Model simply predicts a single value (e.g age).
+* Class output -- each age is considered a single class.
+* Ordinal class output -- classes are ordinal, and so predicting a class should also mean predicting all 'younger' classes.
+* Gaussian Smoothed -- A one-hot encoded vector for age is generated the same way as for 'Class output', however the resulting
+1d vector is smoothed with a gaussian kernel.  The idea here is to train the network to predict a range of ages.
+
+I've made some changes to the main script to try to make things a little more reproducible.  This involves:
+* Recording the parameters the program is called with.
+* Recording train/test loss and learning rate at each epoch in a csv.
+* General formatting to main script output ...
+
+To the side, I've also been experimenting with various model architectures, so I will make a few informal notes here:
+* Max Pooling -- seems to work much better than using 3dConv with stride=kernel.
+* Kernel size -- I tried increasing kernel size.  It may give good results; however, training time in painfully slow (~4x longer)
+* LR decay -- very helpful, but this is entirely expected.
+
+I am currently training a model (stored in models/2019-07-21_09-59-17/) with program call:
+```
+datapath:           dwi_data/
+scale_inputs:       True
+workers:            4   
+savepath:           models/
+save_freq:          1   
+load_model:         None
+conv_layers:        5   
+kernel_size:        [5, 4, 4, 2, 2]
+dilation:           [1] 
+padding:            [2] 
+even_padding:       True
+stride:             [1] 
+filters:            [2, 2, 2, 2, 2]
+weight_init:        kaiming-uniform
+conv_actv:          ['elu']
+fc_actv:            ['elu']
+pooling:            max 
+lr:                 0.001
+decay:              0.99
+reduce_on_plateau:  False
+batch_size:         32  
+epochs:             200 
+update_freq:        1   
+cuda:               True
+debug_size:         None
+silent:             False
+test_model:         None
+encode_age:         False
+```
+
+Which has managed to achieve the best performance so far on the test set:
+```
+Epoch: 35 Test Loss: 3.548e-03 Train Loss: 2.958e-03 LR: 4.899e-04: 100%|████████████████████████████| 435/435 [14:00<00:00,  1.91s/it]
+```
+This corresponds to an 'average' error of around 6 years, which is an imporovement over the 'average' of 7.5 expected by the mean.
+I say 'average' because it it mean squared error, meaning that larger discrepancies will be weighted more heavily.
+
+My experimentation so far hasn't been very systematic.  I've been making tweaks to the model based on curiousity/intuition; 
+however, my intention is to comprehensively explore the features I've laid out.  I believe the framework for this experimentaiton
+is essentially finished, so now I can move into a testing phase.  Using the above model as a starting point, I plan on exploring.
+* Initial LR
+* LR decay (no decay vs every epoch vs on plateau)
+* Batch size (which will likely have interaction effects with LR)
+* Weight initlization
+* Activation functions used in each layer
+* The effect of different loss functions and model outputs
+* Number of convolutional layers
+* Number of filters (and which layers they should be added)
+* Kernel size(s)
