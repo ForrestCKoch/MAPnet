@@ -21,6 +21,7 @@ winit_funcs = {
 
 actv_funcs = {
     'sigmoid':torch.sigmoid,
+    'softmax':F.softmax,
     'tanh':torch.tanh,
     'relu':F.relu,
     'elu':F.elu,
