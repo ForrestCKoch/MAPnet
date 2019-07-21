@@ -1,6 +1,6 @@
-from map.data import *
-from map.model import *
-from map.train import *
+from mapnet.data import *
+from mapnet.model import *
+from mapnet.train import *
 from torch.utils.data import DataLoader
 
 def count_parameters(model):

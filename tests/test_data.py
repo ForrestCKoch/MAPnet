@@ -1,4 +1,4 @@
-from map.data import *
+from mapnet.data import *
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 

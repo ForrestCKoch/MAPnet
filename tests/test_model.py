@@ -1,5 +1,5 @@
-from map.data import *
-from map.model import *
+from mapnet.data import *
+from mapnet.model import *
 from torch.utils.data import DataLoader
 
 sd = get_sample_dict('data',dataset='train')
