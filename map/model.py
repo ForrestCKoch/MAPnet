@@ -89,7 +89,8 @@ class MAPnet(nn.Module):
             conv_actv: Optional[List[Callable[[nn.Module],nn.Module]]]=[F.relu],
             fc_actv: Optional[List[Callable[[nn.Module],nn.Module]]]=[F.relu,F.tanh,F.relu],
             even_padding: Optional[bool]=False,
-            pool: Optional[str]=None
+            pool: Optional[str]=None,
+            output_size: Optional[int]=1
         ):
         """
         Initialize an instance of MAPnet.
@@ -117,6 +118,7 @@ class MAPnet(nn.Module):
         Pooling will be performed with a kernel size and stride of 2,
         and padding will be added to ensure the whole of the input is used.
         If pool = 'avg', padding will not be used to calculate the average.
+        :param output_size: number of nodes in the output layer
         """
         #######################################################################
         # Sanitizing input
@@ -137,6 +139,8 @@ class MAPnet(nn.Module):
             raise ValueError("stride arguments has incorrect length")
         elif not ((len(fc_actv) == 1) or (len(fc_actv) == 3)):
             raise ValueError("conv_actv arguments has incorrect length")
+        elif not (output_size > 1):
+            raise ValueError("Invalid output_size: {}".format(output_size))
         
         super(MAPnet,self).__init__()
 
@@ -287,7 +291,7 @@ class MAPnet(nn.Module):
 
         fc_layers.append(nn.Linear(self.fc_input_size,int(self.fc_input_size/2)))
         fc_layers.append(nn.Linear(int(self.fc_input_size/2),100))
-        fc_layers.append(nn.Linear(100,1))
+        fc_layers.append(nn.Linear(100,output_size))
         self.fc_layers = nn.ModuleList(fc_layers)
         self.fc_actv = fc_actv * 3 if len(fc_actv) == 1 else fc_actv
         
