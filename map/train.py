@@ -17,6 +17,13 @@ from data import get_sample_dict, get_sample_ages, encode_age_nonordinal, \
 from model import get_out_dims, init_weights, get_even_padding, MAPnet, \
         winit_funcs, actv_funcs
 
+loss_funcs = {
+    'L1':torch.nn.L1Loss,
+    'L2':torch.nn.MSELoss,
+    'SmoothL1':torch.nn.SmoothL1Loss,
+    'BCE':torch.nn.BCELoss,
+}
+
 def train_model(
         train_set: torch.utils.data.Dataset, 
         test_set: torch.utils.data.Dataset, 
@@ -236,6 +243,7 @@ def _get_parser():
     parser.add_argument(
         "--load-model",
         type=str,
+        metavar='[str]',
         default=None,
         help="Specify a saved model to load and train.  Other arguments relating to model paremeters (padding, kernel-size, etc..) will be ignored.  Training parameters (learning rate, update frequency, etc ...) may still be specified."
     )
@@ -326,7 +334,7 @@ def _get_parser():
         choices=['max','avg'],
         metavar='[str]',
         default=None,
-        help="Which pooling method to apply in between convolution layers.  If this argument is not specified, then no pooling will be performed"
+        help="Which pooling method to apply in between convolution layers.  If this argument is not specified, then no pooling will be performed. ['max','avg']"
     )
     parser.add_argument(
         "--model-output",
@@ -334,7 +342,7 @@ def _get_parser():
         choices=['value','scaled-value','single-class','ordinal-class','gaussian'],
         metavar='[str]',
         default='age',
-        help="Specify what type of output the model should produce. 'value': model is trained to predict a single value (e.g age). 'scaled-value': same as 'value', but scaled down by a factor of 100. 'single-class': ages are treated as individual classes to be predited. 'ordinal-class': a class should be predicted if it is <= target age. 'gaussian': model is trained to predict a range of outputs centered around the target age."
+        help="Specify what type of output the model should produce. 'value': model is trained to predict a single value (e.g age). 'scaled-value': same as 'value', but scaled down by a factor of 100. 'single-class': ages are treated as individual classes to be predited. 'ordinal-class': a class should be predicted if it is <= target age. 'gaussian': model is trained to predict a range of outputs centered around the target age. ['value','scaled-value','single-class','ordinal-class','gaussian']"
     )
     ###########################################################################
     #  Training Options
@@ -384,12 +392,20 @@ def _get_parser():
         action="store_true",
         help="Set flag to use cuda device(s)"
     )
+    parser.add_argument(
+        "--loss",
+        metavar='[str]',
+        choices=loss_funcs.keys(),
+        default='L2',
+        help="Specify a loss function. [{}]".format(', '.join(loss_funcs.keys()))
+    )
     ###########################################################################
     # Misc. Options
     ###########################################################################
     parser.add_argument(
         "--debug-size",
         type=int,
+        metavar='',
         nargs=4, 
         help="Print out the expected architecture.  4 Integers should be supplied to this argument [channels, dimx, dimy, dimz].  Program execution will terminate afterwards"
     )
@@ -405,7 +421,7 @@ def _get_parser():
         metavar='[str]',
         choices=['test','train'],
         default=None,
-        help="Instead of training the loaded model, it's performance will be assessed on either the test or train set"
+        help="Instead of training the loaded model, it's performance will be assessed on either the test or train set. ['test','train']"
     )
 
     ###########################################################################
@@ -616,7 +632,7 @@ if __name__ == '__main__':
         loss = test_model(
             model,
             data_loader,
-            torch.nn.MSELoss(),
+            loss_funcs[args.loss](),
             args.cuda,show_progress=True
         )
         print("Total loss for the {} set is {}".format(
@@ -653,6 +669,7 @@ if __name__ == '__main__':
             update_freq=args.update_freq,
             save_folder=save_folder,
             save_freq=args.save_freq,
+            loss_func=loss_funcs[args.loss](),
             optimizer=lambda x: torch.optim.Adam(x.parameters(),lr=args.lr),
             scheduler=lambda x: torch.optim.lr_scheduler.ReduceLROnPlateau(
                     x, 
