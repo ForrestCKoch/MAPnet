@@ -315,3 +315,10 @@ is essentially finished, so now I can move into a testing phase.  Using the abov
 * Number of convolutional layers
 * Number of filters (and which layers they should be added)
 * Kernel size(s)
+
+## 22/07/19
+
+Quick side note -- I decided I wanted to add one more feature to play around with.  I have implemented a loss function based on the 
+Wasserstein distance between two density functions.  The intention is for this to be used in conjuction with the 'gaussian' model 
+output in order to learn a distribution function over age as opposed to a single value.  It is available by selecting `-loss Wasserstein`.
+Note that the last fully connected layer should be specified to use softmax to produce a discrete probability density as its output.

@@ -18,22 +18,24 @@ from data import get_sample_dict, get_sample_ages, encode_age_nonordinal, \
 from model import get_out_dims, init_weights, get_even_padding, MAPnet, \
         winit_funcs, actv_funcs
 
-loss_funcs = {
-    'L1':torch.nn.L1Loss,
-    'L2':torch.nn.MSELoss,
-    'SmoothL1':torch.nn.SmoothL1Loss,
-    'BCE':torch.nn.BCELoss,
-}
 
+"""
 class WassersteinLoss(torch.autograd.Function):
     def __init__(
             self,
             p:Optional[int]=1,
             softmax:Optional[bool]=False,
             reduction:Optional[str]='sum'):
-        """
-        Implement Wasserstein Loss
-        """
+        \"""
+        Implement Wasserstein Loss.  It assumes that the target is a pdf such
+        that the sum of all entries is 1.  The inputs may be converted to a
+        pdf by setting the `softmax` flag to `True`, otherwise, the same
+        requirement holds for the inputs.
+        :param p: Either 1 (for L1 loss) or 2 (for squared loss) are currently 
+        supported
+        :param softmax: Whether to apply softmax thresholding to the inputs
+        :param reduction: reduction parameter to be passed to l1_loss/mse_loss
+        \"""
         super(WassersteinLoss,self).__init__()
         if p == 1:
             self.cdf_loss = F.l1_loss
@@ -42,14 +44,52 @@ class WassersteinLoss(torch.autograd.Function):
         self.softmax = softmax
         self.reduction = reduction
 
-    def forward(ctx, inputs, targets):
+    def forward(self, inputs, targets):
         size = inputs.shape[1]
-        weights = np.triu(np.zeros((size,size))+1,k=0)
+        weights = torch.tensor(
+            np.triu(np.zeros((size,size))+1,k=0).astype(np.float32),
+            dtype=torch.float32,
+            device=inputs.device
+        )
         if self.softmax:
             inputs = F.softmax(inputs)
         cdf_inputs = F.linear(inputs,weights)
         cdf_targets = F.linear(targets,weights)
         return self.cdf_loss(cdf_inputs,cdf_targets,reduction=self.reduction)
+"""
+def WassersteinLoss(
+        p:Optional[int]=1,
+        softmax:Optional[bool]=False,
+    ):
+    if p == 1:
+        cdf_loss = F.l1_loss
+    else:
+        cdf_loss = F.mse_loss
+
+    def forward(inputs, targets):
+        size = inputs.shape[1]
+        weights = torch.tensor(
+            np.triu(np.zeros((size,size))+1,k=0).astype(np.float32),
+            dtype=torch.float32,
+            device=inputs.device
+        )
+        if softmax:
+            inputs = F.softmax(inputs)
+
+        cdf_inputs = F.linear(inputs,weights)
+        cdf_targets = F.linear(targets,weights)
+        loss = cdf_loss(cdf_inputs,cdf_targets,reduction='none')
+        return torch.mean(torch.sum(loss,dim=1))
+
+    return forward
+
+loss_funcs = {
+    'L1':torch.nn.L1Loss,
+    'L2':torch.nn.MSELoss,
+    'SmoothL1':torch.nn.SmoothL1Loss,
+    'BCE':torch.nn.BCELoss,
+    'Wasserstein':WassersteinLoss,
+}
 
 def train_model(
         train_set: torch.utils.data.Dataset, 
