@@ -141,8 +141,6 @@ def train_model(
     ###########################################################################
     for i in range(0, epochs):
 
-        if model_scheduler is not None:
-            model_scheduler.step()
         data_iterator = tqdm(
             train_data_loader,
             desc=desc_genr(i,test_loss,0,model_optimizer.param_groups[0]['lr']),
@@ -722,7 +720,7 @@ if __name__ == '__main__':
             scheduler=lambda x: torch.optim.lr_scheduler.ReduceLROnPlateau(
                     x, 
                     factor=args.decay,
-                    patience=10,
+                    patience=5,
                     threshold=1e-04
                 ) if args.reduce_on_plateau else \
                 torch.optim.lr_scheduler.ExponentialLR(
