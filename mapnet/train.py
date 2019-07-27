@@ -382,7 +382,7 @@ def _get_parser():
         type=str,
         choices=['value','scaled-value','single-class','ordinal-class','gaussian'],
         metavar='[str]',
-        default='age',
+        default='scaled-value',
         help="Specify what type of output the model should produce. 'value': model is trained to predict a single value (e.g age). 'scaled-value': same as 'value', but scaled down by a factor of 100. 'single-class': ages are treated as individual classes to be predited. 'ordinal-class': a class should be predicted if it is <= target age. 'gaussian': model is trained to predict a range of outputs centered around the target age. ['value','scaled-value','single-class','ordinal-class','gaussian']"
     )
     ###########################################################################
@@ -528,7 +528,8 @@ def print_network_size(args:argparse.ArgumentParser):
 def convert_targets(targets,option):
     choices=['value','scaled-value','single-class','ordinal-class','gaussian'],
     if option == 'scaled-value':
-        return targets/100
+        #return [torch.tensor([x/100]) for x in targets]
+        return [torch.tensor(x/100).view(-1,1) for x in targets]
     elif option == 'single-class':
         return [encode_age_nonordinal(t,np.array(range(35,75))) for t in targets]
     elif option == 'ordinal-class':
@@ -536,7 +537,7 @@ def convert_targets(targets,option):
     elif option == 'gaussian':
         return [encode_smooth_age(t,np.array(range(35,75)),0.7) for t in targets]
     else:
-        return targets
+        return [torch.tensor([x]).view(-1,1) for x in targets]
             
 if __name__ == '__main__': 
     parser = _get_parser()
@@ -608,6 +609,8 @@ if __name__ == '__main__':
     if args.load_model is None:
         if not args.silent:
             print("Initializing model ...")
+        print(conv_train_ages[0])
+        print(conv_train_ages[0].shape)
         model = MAPnet(
             input_shape=train_ds.image_shape,
             n_conv_layers=args.conv_layers,
@@ -622,6 +625,7 @@ if __name__ == '__main__':
             even_padding=args.even_padding,
             pool=args.pooling,
             output_size=len(conv_train_ages[0])
+            #output_size=1
         )
         ###########################################################################
         # Weight Initializaiton
