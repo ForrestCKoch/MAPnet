@@ -1,8 +1,10 @@
 data/*
 models/*
+dwi_data/*
 *.swp
 *.tmp
 *.temp
 *.pyc
 *.pyo
 __pycache__
+logs/*
