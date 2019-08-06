@@ -8,3 +8,4 @@ dwi_data/*
 *.pyo
 __pycache__
 logs/*
+*.dat
