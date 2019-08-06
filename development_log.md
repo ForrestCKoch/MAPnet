@@ -322,3 +322,7 @@ Quick side note -- I decided I wanted to add one more feature to play around wit
 Wasserstein distance between two density functions.  The intention is for this to be used in conjuction with the 'gaussian' model 
 output in order to learn a distribution function over age as opposed to a single value.  It is available by selecting `-loss Wasserstein`.
 Note that the last fully connected layer should be specified to use softmax to produce a discrete probability density as its output.
+
+# 27/07/19
+
+17:40 -- Started running some tests to compare various learning rates and batch sizes (see `scripts/lr_test.sh`)
