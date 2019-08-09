@@ -443,7 +443,7 @@ def _get_parser():
     parser.add_argument(
         "--optim",
         metavar='[str]',
-        choices=['adam','adamw','adamax','adagrad','sgd'],
+        choices=['adam','adamw','adadelta','adamax','adagrad','sgd'],
         default='adam',
         help="Specify optimizer to use. [{}]".format(', '.join(['adam','adamw','adamax','adagrad','sgd']))
     )
@@ -776,7 +776,7 @@ if __name__ == '__main__':
                 weight_decay=args.weight_decay,
                 amsgrad=args.amsgrad
             )
-        elif args.optim == 'adam':
+        elif args.optim == 'adamw':
             optimizer = lambda x : torch.optim.AdamW(x.parameters(),
                 lr=args.lr,
                 betas=(args.beta1,args.beta2),
