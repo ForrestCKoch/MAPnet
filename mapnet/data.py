@@ -47,7 +47,10 @@ def get_sample_ages(
         for line in fh:
             line = line.rstrip('\n')
             sid,age = line.split(',')
-            id_to_age[sid] = float(age)
+            try:
+                id_to_age[sid] = float(age)
+            except:
+                pass
     return np.array([id_to_age[i] for i in ids],dtype=np.float32)
     
 def encode_age_ordinal(
