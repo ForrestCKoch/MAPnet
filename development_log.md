@@ -326,3 +326,35 @@ Note that the last fully connected layer should be specified to use softmax to p
 # 27/07/19
 
 17:40 -- Started running some tests to compare various learning rates and batch sizes (see `scripts/lr_test.sh`)
+
+# 09/08/19
+
+I've been pretty bad at updating this diary over the past few weeks as I have mainly been waiting on results to come through.  I will give an overview of my experiments here:
+
+## Learning Rate & Batch Sizes
+As mentioned in the previous log, I began by conducting a grid search over batch sizes (32,64,96,128), and learning rate (0.01,0.001,0.0001,0.00001).  The grid search is important here as the batch size can have effects on the optimal learning rate. Trials were run over 10 epochs.
+
+These results indicated that I should use a batch size of 64 with learning rate of 0.0001.
+
+### Activation Functions
+PyTorch provides access to a large range of activation functions:
+* relu
+* elu
+* rrelu
+* leaky-relu
+* sigmoid
+* tanh
+
+I conducted another grid search over each pairwise combination (36 trials).  One activation function was used for each of the convolutional layers, and the other was used for each of the fully connected layers. Trials were run over 20 epochs.
+
+These results indicated that tanh should be used for the convolutional layers, and sigmoid should be used for the 3 fully connected layers.  I then conducted another series of tests allowing for a combination of activation functions in the fully connected layers as this is standard practice.  The fully connected layers took the form `X-X-sigmoid` where `X` is one of: relu,elu,rrelu,tanh (leaky-relu was exclued for poor performance in the previous test).
+
+the `relu-relu-sigmoid` performed best in this second trial, but still not as well as the fully sigmoid option.  The `relu-relu-sigmoid` option seems to be more common in literature, so I will not exclude it as a possibility at this point.
+
+## Learning Rate Decay
+For each both the `relu-relu-sigmoid` and fully `sigmoid` options, I tested the effects over various amounds of learning rate decay.  At the end of each epoch, learning rate was reduced by a multiplicitive factor (no_decay,0.995,0.99,0.985,0.98,...,0.90).
+
+No decay still seems to learn the fastest; however, 0.995 was quite close.  Given lr decay has proven benefits in much of the literature, I will consider models with both no decay and 0.995.
+
+## MASSIVE PROBLEM FOUND
+I just realized I've been using inaccurate ages for my data.  I have updated the data and will see how it affects accuracy.
