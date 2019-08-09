@@ -440,6 +440,66 @@ def _get_parser():
         default='L2',
         help="Specify a loss function. [{}]".format(', '.join(loss_funcs.keys()))
     )
+    parser.add_argument(
+        "--optim",
+        metavar='[str]',
+        choices=['adam','adamw','adamax','adagrad','sgd'],
+        default='adam',
+        help="Specify optimizer to use. [{}]".format(', '.join(['adam','adamw','adamax','adagrad','sgd']))
+    )
+    parser.add_argument(
+        "--weight-decay",
+        metavar='[float]',
+        type=float,
+        default=0,
+        help="weight decay parameter for relevant optimizers"
+    )
+    parser.add_argument(
+        "--beta1",
+        metavar='[float]',
+        type=float,
+        default=0.9,
+        help="beta1 parameter for relevant optimizers"
+    )
+    parser.add_argument(
+        "--beta2",
+        metavar='[float]',
+        type=float,
+        default=0.999,
+        help="beta1 parameter for relevant optimizers"
+    )
+    parser.add_argument(
+        "--rho",
+        metavar='[float]',
+        type=float,
+        default=0.9,
+        help="rho parameter for relevant optimizers"
+    )
+    parser.add_argument(
+        "--momentum",
+        metavar='[float]',
+        type=float,
+        default=0.0,
+        help="momentum parameter for relevant optimizers"
+    )
+    parser.add_argument(
+        "--dampening",
+        metavar='[float]',
+        type=float,
+        default=0.0,
+        help="dampening parameter for relevant optimizers"
+    )
+    parser.add_argument(
+        "--amsgrad",
+        action="store_true",
+        help="whether to use the amsgrad variant"
+    )
+    parser.add_argument(
+        "--nesterov",
+        action="store_true",
+        help="whether to use the nesterov variant"
+    )
+    
     ###########################################################################
     # Misc. Options
     ###########################################################################
@@ -705,6 +765,52 @@ if __name__ == '__main__':
                     print('{0:20}{1}'.format(arg+':',getattr(args,arg)),file=fh)
         else:
             save_folder = None
+
+        ###########################################################################
+        # Setup our optimizer
+        ###########################################################################
+        if args.optim == 'adam':
+            optimizer = lambda x : torch.optim.Adam(x.parameters(),
+                lr=args.lr,
+                betas=(args.beta1,args.beta2),
+                weight_decay=args.weight_decay,
+                amsgrad=args.amsgrad
+            )
+        elif args.optim == 'adam':
+            optimizer = lambda x : torch.optim.AdamW(x.parameters(),
+                lr=args.lr,
+                betas=(args.beta1,args.beta2),
+                weight_decay=args.weight_decay,
+                amsgrad=args.amsgrad
+            )
+        elif args.optim == 'adadelta':
+            optimizer = lambda x : torch.optim.Adadelta(x.parameters(),
+                lr=args.lr,
+                weight_decay=args.weight_decay,
+                rho=args.rho
+            )
+        elif args.optim == 'adamax':
+            optimizer = lambda x : torch.optim.Adamax(x.parameters(),
+                lr=args.lr,
+                betas=(args.beta1,args.beta2),
+                weight_decay=args.weight_decay,
+            )
+            pass
+        elif args.optim == 'adagrad':
+            optimizer = lambda x : torch.optim.Adadelta(x.parameters(),
+                lr=args.lr,
+                weight_decay=args.weight_decay,
+            )
+        elif args.optim == 'sgd':
+            optimizer = lambda x: torch.optim.SGD(x.parameters(),
+                lr=args.lr,
+                momentum=args.momentum,
+                weight_decay=args.weight_decay,
+                dampening=args.dampening,
+                nesterov=args.nesterov
+            )
+
+
         ###########################################################################
         # And finally, begin training
         ###########################################################################
