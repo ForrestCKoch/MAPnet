@@ -356,5 +356,11 @@ For each both the `relu-relu-sigmoid` and fully `sigmoid` options, I tested the 
 
 No decay still seems to learn the fastest; however, 0.995 was quite close.  Given lr decay has proven benefits in much of the literature, I will consider models with both no decay and 0.995.
 
-## MASSIVE PROBLEM FOUND
-I just realized I've been using inaccurate ages for my data.  I have updated the data and will see how it affects accuracy.
+## Number of filters
+I ran some tests on the ideal number of filters to introduce at each layer.  It seems more is better as 3-3-3-3-3 ended up obtaining the lowest test error after 40 epochs.  There does seem to be a trade-off here, as batch size must be reduced to 32 on gpus with less memory.
+
+## Weight decay
+I added some more options to allow customization of optimizers and their parameters.  Tests on weight decay for Adam/AdamW optimizers (with default/amsgrad options) are ongoing.
+
+# 10/08/19
+
