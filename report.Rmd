@@ -1,0 +1,414 @@
+---
+title: 'COMP9417 Project: MAPnet'
+author: "Forrest Koch z3463797"
+date: "August 10, 2019"
+output:
+  pdf_document:
+    fig_crop: no
+    number_sections: yes
+bibliography: references.bib
+header-includes:
+  - \usepackage{graphicx}
+  - \usepackage{listings}
+  - \usepackage{float}
+  - \floatplacement{figure}{H} 
+---
+```{r rsetup,echo=F}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.pos = 'h')
+```
+```{python setup,echo=F}
+import matplotlib as pyplot
+```
+
+
+# Introduction
+
+There is significant interest in the medical community for a generalized "brain age" measure as a tool to communicate overall health to patients.  Think of the doctor informing a smoker that they have "the lungs of a 70 year old" despite only being 40.  Brain health is expected to decline naturally with age; however, this decline is by no means constant across a population, and is heavily influenced by genetic and lifestyle factors [@kalaria_alzheimers_2008].  Therefore, a tool which allows individuals to track their "brain age" relative to their peers could prove an immensely valuable tool.
+
+In addition to providing a general indication of health, there is speculation that this approach may also be helpful for creating "brain aging profiles" for various brain pathologies.  For example, @cole_prediction_2015 found that traumatic brain injuries result in an accelerated rate of brain aging.  Alzheimers and Dementia are well known for their accelerated rate of cognitive decline and cortical atrophy [@mckhann_diagnosis_2011], and so a brain aging model would be of clear benefit here as well.
+
+## Description of the Problem
+Predicting brain age refers to the estimation of an individual's age using only physiological and/or anatomical information about their brain.  In order to be generally applicable, we also require that any methods used to acquire this information be non-invasive.  That is, they do not involve the introduction of medical equipment into the body. Magnetic Resonance Imaging (MRI) is one such technology that meets these requirements and will be the focus of this work.  Its worth noting that other methods such as Electroencephalography (EEG) and Magnetic Resonance Spectroscopy (MRS) could be used to these means as well, however, their use is beyond the scope of this work.
+
+MRI is a medical imaging technique that utilizes strong magnetic fields and gradients in order to measure various properties of brain tissues.  There are many approaches, commonly referred to as modalities, each measuring different aspects of the brain.  For example, T1 and T2 FLAIR images are commonly used to construct detailed anatomical images, whereas fMRI is used to measure changes in blood oxygen levels and is said to be reflective of brain activity.  Reconstructed images are typically 3 or 4 dimensions and are on the order of 1 million voxels, or volumetric pixels, per 3D volume.
+
+The large number of datapoints within a single image can present signficant complications when it comes to making predictions from MRI data.  As a result most approaches have involved feature extraction to reduce the data's high dimensionality. Both @valizadeh_age_2017 and @aycheh_biological_2018 used measurements of anatomical regions (e.g cortical volume and thickness) derived from T1 MRI images to predict brain age. However, feature extraction can be a complicated process requiring in-depth domain knowledge and extensive quality control proceedures.  Furthermore, potentially relevent information is likely to be lost during the feature extraction process which can have negative impacts on the predictive power of a model.
+
+## Proposed Solution
+From handwritten digit recognition [@ciresan_convolutional_2011] to object recognition [@krizhevsky_imagenet_2012], 2D convolutional neural networks (CNNs) have been successfully utilized to solve many complicated computer vision tasks in recent years.  This success extends to medical imaging, where 3D CNNs have been used for the segmentation of brain tumors [@pereira_brain_2016] as well as the classification of Alzheimer's Disease [@payan_predicting_2015] from preprocessed MRI data.  CNNs learn features directly from the training data effectively sidestepping the feature development process and problems mentioned above (albeit by introducing the complication of training a deep learning model).
+
+The aim of this work is to develop a neural network utilizing 3D convolutional layers for the purpose of predicting age from MRI data alone.  An experimental framework will be developed to fascilitate the exploration of various network architectures and training parameters. Subsequently, a range of experiments will be conducted to determine how performance changes when certain parameters are adjusted.  The results of these experiments will guide the model development.  Finally, model performance will be assessed on a held-out set of data not previously used during model development.
+
+# Methods 
+
+## About the Data
+We will use Diffusion Weighted Imaging (DWI) scans from the UK Biobank Study. This long-term population study has collected physical and health data from over 500,000 participants, a subset of which also underwent an MRI acquisition [@sudlow_uk_2015].
+
+DWI is an MRI modality that measures the diffusion of water from multiple directions.  It is useful for determining the structural integrity of white-matter, and is highly affected by ageing processes [@sullivan_diffusion_2006].  Images are 104 x 104 x 72 voxels where each voxel is 2mm x 2mm x 2mm.
+
+## Preprocessing
+Fractional Anisotropy (FA), Mean Diffusivity (MD), Axial Diffusivity (AD), and Radial Diffusivity (RD) images were first derived by fitting the Diffusion Tensor model to the DWI data. Descriptions of these measures are available in Table 1.
+
+```{r table1, echo=F}
+library(knitr)
+descriptions <-c("How restricted the diffusion is",
+  "Average diffusion in all directions",
+  "Magnitude of diffusion along the main axis",
+  "Magnitude of diffusion perpendicular to the main axis")
+kable(data.frame(Measure=c('FA','MD','AD','RD'),Description=descriptions),caption='Description of DWI measures')
+```
+
+Images were then transformed to a common MNI space template to ensure consistent alignment between subjects.  This step is necessary to prevent the model from having to accomodate relative shifts and rotations of the brain between subjects.
+
+Finally, each image is scaled to have a range between 0 and 1 by the following formula:
+\[ \forall v_i\in V : v'_i = \frac{v_i-\min(V)}{\max(V)-\min(V)}\]
+Where $V$ is the set of all non-zero voxels, and $v_i$ is the $i^{th}$ voxel.  This ensures that each of the four input channels are similar in scale which is important for successful training of neural networks.
+
+## Subjects Demographics
+```{r, echo=F}
+data <- read.csv('dwi_data/subject_info.csv')
+m <- mean(data$age,na.rm=T)
+s <- sd(data$age,na.rm=T)
+mse <- mean((data$age-m)^2,na.rm=T)
+```
+The cohort has a mean age of `r m` with a standard deviation of `r s`.  For reference to later results, a model which predicts the population mean would have an expected Mean-Squared Error (MSE) of `r mse`.
+
+```{r,echo=F,fig.cap='Histogram of Subject Ages',fig.width=3,fig.height=3}
+hist(data$age,xlab='age',main='')
+```
+
+## Train, Test, and Validation Sets
+A total of 17915 subjects have been used for this project.  This has been randomly partitioned into train, test, and validation sets wth respective sizes of 13915, 2000, and 2000.  The train set will be used to train the model, the test set will be used to asses model performance during model development, and the valiation set will be used to assess the final model performance.
+
+## Experimental Framework
+
+The `train.py` script allows the user to specify a multitude of options relating to network architecture and training parameters. It was written in order to facilitate rigorous testing to inform model development. Listing 1 shows the help message for this script and summarizes the options available.
+\newpage
+\begin{lstlisting}[basicstyle=\small,caption='Help message for \texttt{train.py} script']
+usage: train.py [-h] [--datapath [str]] [--scale-inputs] [--workers [int]]
+                [--savepath [str]] [--save-freq [str]] [--load-model [str]]
+                [--conv-layers [int]] [--kernel-size int [int ...]]
+                [--dilation int [int ...]] [--padding int [int ...]]
+                [--even-padding] [--stride int [int ...]]
+                [--filters int [int ...]] [--weight-init [str]]
+                [--conv-actv str [str ...]] [--fc-actv str [str ...]]
+                [--pooling [str]] [--model-output [str]] [--lr [float]]
+                [--decay [float]] [--reduce-on-plateau] [--batch-size [int]]
+                [--epochs [int]] [--update-freq [int]] [--cuda] [--loss [str]]
+                [--optim [str]] [--weight-decay [float]] [--beta1 [float]]
+                [--beta2 [float]] [--rho [float]] [--momentum [float]]
+                [--dampening [float]] [--amsgrad] [--nesterov]
+                [--debug-size   ] [--silent] [--test-model [str]]
+                [--encode-age]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --datapath [str]      Path to data folder (default: data)
+  --scale-inputs        Set flag to scale input images (default: False)
+  --workers [int]       Number of workers in DataLoader (default: 8)
+  --savepath [str]      Folder where model checkpoints should be saved -- if
+                        None model will not be saved. If savepath is
+                        specified, models will be saved in a new folder named
+                        according to the date and time it is run. If mutliple
+                        instances are being run in parallel, each instance
+                        should have a different savepath to avoid overlap.
+                        (default: None)
+  --save-freq [str]     How often model checkpoints should be saved (in
+                        epochs) (default: 1)
+  --load-model [str]    Specify a saved model to load and train. Other
+                        arguments relating to model paremeters (padding,
+                        kernel-size, etc..) will be ignored. Training
+                        parameters (learning rate, update frequency, etc ...)
+                        may still be specified. (default: None)
+  --conv-layers [int]   Number of Conv3d layers (default: 3)
+  --kernel-size int [int ...]
+                        Kernel size of each filter (default: [5])
+  --dilation int [int ...]
+                        Dilation factor for each filter (default: [1])
+  --padding int [int ...]
+                        Zero padding to be used in Conv3d layers (default:
+                        [2])
+  --even-padding        Calculate padding vectors to ensure even perfect
+                        overlap with kernel applications. Layers with stride =
+                        1 will have input dimensions preserved. The '--
+                        padding' argument is ignored when this flag is set
+                        (default: False)
+  --stride int [int ...]
+                        Stride between filter applications (default: [3])
+  --filters int [int ...]
+                        Filters to apply to each channel -- one entry per
+                        layer (default: [4, 4, 4])
+  --weight-init [str]   Weight initialization method [normal, uniform, xavier-
+                        normal, xavier-uniform, kaiming-normal, kaiming-
+                        uniform, leaky-kaiming-normal, leaky-kaiming-uniform]
+                        (default: kaiming-uniform)
+  --conv-actv str [str ...]
+                        Activation functions to be used in convolutional
+                        layers -- must be 1 or n_conv_layers [sigmoid,
+                        softmax, tanh, relu, elu, leaky-relu, rrelu] (default:
+                        ['relu'])
+  --fc-actv str [str ...]
+                        Activation functions to be used in convolutional
+                        layers -- must be 1 or n_conv_layers [sigmoid,
+                        softmax, tanh, relu, elu, leaky-relu, rrelu] (default:
+                        ['relu'])
+  --pooling [str]       Which pooling method to apply in between convolution
+                        layers. If this argument is not specified, then no
+                        pooling will be performed. ['max','avg'] (default:
+                        None)
+  --model-output [str]  Specify what type of output the model should produce.
+                        'value': model is trained to predict a single value
+                        (e.g age). 'scaled-value': same as 'value', but scaled
+                        down by a factor of 100. 'single-class': ages are
+                        treated as individual classes to be predited.
+                        'ordinal-class': a class should be predicted if it is
+                        <= target age. 'gaussian': model is trained to predict
+                        a range of outputs centered around the target age.
+                        ['value','scaled-value','single-class','ordinal-
+                        class','gaussian'] (default: scaled-value)
+  --lr [float]          Learning rate paramater (default: 0.001)
+  --decay [float]       Learning rate decay (multiplicative factor). Unless '
+                        --reduce-on-plateau is set, this decay rate is applied
+                        every epoch (default: 1.0)
+  --reduce-on-plateau   Learning rate will decay after performance on the
+                        train set plateaus as opposed to every epoch (default:
+                        False)
+  --batch-size [int]    Number of samples per batch (default: 32)
+  --epochs [int]        Number of epochs to train over (default: 20)
+  --update-freq [int]   How often (in epochs) to asses test set accuracy
+                        (default: 1)
+  --cuda                Set flag to use cuda device(s) (default: False)
+  --loss [str]          Specify a loss function. [L1, L2, SmoothL1, BCE,
+                        Wasserstein] (default: L2)
+  --optim [str]         Specify optimizer to use. [adam, adamw, adamax,
+                        adagrad, sgd] (default: adam)
+  --weight-decay [float]
+                        weight decay parameter for relevant optimizers
+                        (default: 0)
+  --beta1 [float]       beta1 parameter for relevant optimizers (default: 0.9)
+  --beta2 [float]       beta1 parameter for relevant optimizers (default:
+                        0.999)
+  --rho [float]         rho parameter for relevant optimizers (default: 0.9)
+  --momentum [float]    momentum parameter for relevant optimizers (default:
+                        0.0)
+  --dampening [float]   dampening parameter for relevant optimizers (default:
+                        0.0)
+  --amsgrad             whether to use the amsgrad variant (default: False)
+  --nesterov            whether to use the nesterov variant (default: False)
+  --debug-size          Print out the expected architecture. 4 Integers should
+                        be supplied to this argument [channels, dimx, dimy,
+                        dimz]. Program execution will terminate afterwards
+                        (default: None)
+  --test-model [str]    Instead of training the loaded model, it's performance
+                        will be assessed on either the test or train set.
+                        ['test','train'] (default: None)
+\end{lstlisting}
+
+# Experiments & Results 
+
+## Initial Model
+The initial model consisted of 5 3D convolutional layers with a dilation of 1, stride of 1, no padding and max pooling between layers.  Kernel sizes for each layer were 5, 4, 4, 2, and 2 respectively, and filters per channel at each layer are 2 so that there are 128 channels after the last convolutional layer.  These channels are flattened and concatenated with 50% dropout being applied.  Three fully connected layers then gradually reduce the number of nodes to 1, which is taken to be the output.  Exponential linear units (elu) were used as the activation function for each layer.
+
+For training, target ages were scaled by dividing by 100, and Mean Squared Error (MSE) loss was used alongside an Adam optimizer with default settings of 0.99 and 0.999 for $\beta_1$ and $\beta_2$ respectively. Weight initialization was performed by the `kaiming-uniform` method.  Model performance is assessed on the training set at the end of each epoch.
+
+See Listing 2 for a summary of the model.  Overall there were 162,985 parameters.  
+
+\begin{lstlisting}[basicstyle=\small,caption='Initial model summary']
+datapath:           dwi_data/
+scale_inputs:       True
+workers:            6
+savepath:           models/
+save_freq:          1
+load_model:         None
+conv_layers:        5
+kernel_size:        [5, 4, 4, 2, 2]
+dilation:           [1]
+padding:            [2]
+even_padding:       True
+stride:             [1]
+filters:            [2, 2, 2, 2, 2]
+weight_init:        kaiming-uniform
+conv_actv:          ['elu']
+fc_actv:            ['elu']
+pooling:            max
+lr:                 0.001
+decay:              1.0
+reduce_on_plateau:  False
+batch_size:         32
+epochs:             10
+update_freq:        1
+cuda:               True
+debug_size:         None
+silent:             False
+test_model:         None
+----------------------------------------------------------------
+        Layer (type)               Output Shape         Param #
+================================================================
+     ConstantPad3d-1      [-1, 4, 104, 104, 72]               0
+            Conv3d-2      [-1, 8, 100, 100, 68]           1,008
+         MaxPool3d-3        [-1, 8, 50, 50, 34]               0
+     ConstantPad3d-4        [-1, 8, 50, 50, 34]               0
+            Conv3d-5       [-1, 16, 47, 47, 31]           1,040
+         MaxPool3d-6       [-1, 16, 24, 24, 16]               0
+     ConstantPad3d-7       [-1, 16, 24, 24, 16]               0
+            Conv3d-8       [-1, 32, 21, 21, 13]           2,080
+         MaxPool3d-9        [-1, 32, 11, 11, 7]               0
+    ConstantPad3d-10        [-1, 32, 11, 11, 7]               0
+           Conv3d-11        [-1, 64, 10, 10, 6]             576
+        MaxPool3d-12          [-1, 64, 5, 5, 3]               0
+    ConstantPad3d-13          [-1, 64, 5, 5, 3]               0
+           Conv3d-14         [-1, 128, 4, 4, 2]           1,152
+        MaxPool3d-15         [-1, 128, 2, 2, 1]               0
+          Dropout-16                  [-1, 512]               0
+           Linear-17                  [-1, 256]         131,328
+           Linear-18                  [-1, 100]          25,700
+           Linear-19                    [-1, 1]             101
+================================================================
+Total params: 162,985
+Trainable params: 162,985
+Non-trainable params: 0
+\end{lstlisting}
+
+
+## Learning Rate and Batch Size Grid Search
+The ideal learning rate is highly dependent upon batch size.  This is because larger batch sizes result in more stable training, and allow for larger learning rates to be applied.  However, larger batch sizes may result in slower learning and also require more memory in order to compute backwards gradients.  To determine the ideal combination of paramters, a grid search was performed by testing every pairwise combination of `batch_size = {16, 32, 64, 96, 128}` and `learing_rate = {0.01, 0.001, 0.0001, 0.00001}`.  Each model was trained for 10 epochs, after which MSE loss on the test set was used for comparison. The results are sumarized by the heatmap shown in Figure 2.
+
+```{r, echo=F,fig.cap='Heatmap of MSE after 10 epochs with batch size on the y-axis and learning rate on the x-axis',fig.height=4,fight.width=4,message=F,warning=F}
+library(corrplot)
+library(viridis)
+data <- read.csv('results/csvs/lr_comparison/10th_epoch_lr_comparison.csv')
+m <- matrix(nrow=length(unique(data$batch_size)),ncol=length(unique(data$learning_rate)))
+rownames(m)<-unique(data$batch_size)
+colnames(m)<-unique(data$learning_rate)
+for(i in c(1:dim(data[1]))){
+  obvs <- data[i,]
+  m[paste(obvs$batch_size),paste(obvs$learning_rate)]<-obvs$test_error
+}
+m2<-m
+m2[m>0.3]<-0.3
+corrplot(m2,is.corr=F,method='color',number.digits=4,tl.col='black',col=viridis(20,begin=0,end=0.8,direction=1),cl.lim=c(min(m2),max(m2)))
+for(i in c(1:dim(m)[1])){
+  for(j in c(1:dim(m)[2])){
+    text(j,dim(m)[1]-i+1,paste(format(m[i,j],digits=2,scientific=T)),cex=0.65)
+  }
+}
+```
+
+A learning rate of 1e-04 provided the best reduction in test set MSE after 10 epochs with larger batch sizes showing worse performance.  A batch size of 64 was selected for further models despite the slightly worse performance at this stage.  The same performance should be able to be obtained with extra training, and the model will be less prone to overfitting.
+
+At this point, the selected model has an MSE loss on the test set of 8.4e-03 whereas the best observed model had an MSE of 6.1e-03.  Recall that the expected MSE loss from predicting the cohort mean was 56 years.  After accounting for scaling of the target value, this is equivalent to 5.6e-03, so none of the models perform as well as just predicting the mean.
+
+## Ideal Activation Functions Grid Search
+Next, the effect of different activation functions on model performance was explored.  The activation functions considered in this experiment were:
+
+\begin{itemize}
+\item{Rectified Linear Units (relu)}
+  \begin{flalign*}
+  \text{relu}(x) = \max(0,x) &&
+  \end{flalign*}
+\item{Exponential Linear Units (elu)}
+  \begin{flalign*}
+  \text{elu}(x) = \max(0,x) + \min(0,exp(x)-1) &&
+  \end{flalign*}
+\item{Random rectified linear units (rrelu)}
+  \begin{flalign*}
+  \text{rrelu}(x) =
+        \begin{cases}
+            x & \text{if } x \geq 0 \\
+            ux & \text{ otherwise }
+        \end{cases} && 
+        \text{where } u\sim U(0,1) &&
+  \end{flalign*}
+\item{Leaky-relu}
+  \begin{flalign*}
+  \text{leaky-relu}(x) = \max(0,x) + \min(0,-0.1*x) &&
+  \end{flalign*}
+\item{Sigmoid}
+  \begin{flalign*}
+  \text{sigmoid}(x) = \frac{1}{1+\text{exp}(-x)} &&
+  \end{flalign*}
+\item{Tanh}
+  \begin{flalign*}
+  \text{tanh}(x) = \frac{\text{exp}(x)-\text{exp}(-x)}{\text{exp}(x)+\text{exp}(-x)} &&
+  \end{flalign*}
+\end{itemize}
+
+Convolutional and fully connected layers often require different activation functions, and so a grid search was performed comparing various pairwise combinations of the above activation functions.  This included using multiple activation functions in the fully connected layers (e.g `relu-relu-sigmoid`). This time, models were trained for 20 epochs, and the best MSE value on the test set was used for comparison.  The results are summarized in Figure 3.
+
+```{r, echo=F,fig.cap='Heatmap of MSE after 20 epochs with Conv layer activations on the y-axis and FC layer activations on the x-axis.  Entries with NA were either not run, or crashed due to memory consumption',message=F,warning=F}
+library(corrplot)
+library(viridis)
+data <- read.csv('results/csvs/layer_comparison/layer_trials.csv')
+m <- matrix(nrow=length(unique(data$conv)),ncol=length(unique(data$fc)))
+rownames(m)<-unique(data$conv)
+colnames(m)<-unique(data$fc)
+for(i in c(1:dim(data[1]))){
+  obvs <- data[i,]
+  m[paste(obvs$conv),paste(obvs$fc)]<-obvs$test_error
+}
+m1<-m
+m1[is.na(m)]<-0.008
+corrplot(m1,is.corr=F,method='color',tl.col='black',col=viridis(20,begin=0,end=1,direction=1),cl.lim=c(min(m1),max(m1)))
+for(i in c(1:dim(m)[1])){
+  for(j in c(1:dim(m)[2])){
+    if(is.na(m[i,j])){
+      text(j,dim(m)[1]-i+1,'NA',cex=0.75)
+    }else{
+      text(j,dim(m)[1]-i+1,paste(format(m[i,j],digits=2,scientific=T)),cex=0.65)
+    }
+  }
+}
+```
+
+The best performing model used tanh activations on the convolution layers and sigmoid activations on the fully connected layers.  It obtained an MSE of 4.1e-03 after 20 epochs, which is an improvement over predicting the cohort mean (expected MSE of 5.6e-03).
+
+## Experimenting with Learning Rate Decay
+The next experiment investigated the effect of learning rate decay on model performance.  Starting with an initial learning rate of 1e-04, the learning rate was decreased by a multiplicitive factor.  That is
+
+\[\eta_{i+1} = \lambda \eta_i , 0<\lambda\leq 1 \]
+
+where $\eta_i$ is the learning rate at the $i^{th}$ epoch and $\lambda$ is the decay factor. Models with $\lambda = 0.90, 0.905, 0.91, ... , 0.995, 1.0$ were trained and their best MSE on the test set across 40 epochs was used for comparison with the other models.  Figure 4 -- Left summarizes the results.
+
+```{r, echo=F,fig.cap='(Left) Learning rate decay against Test set MSE (Right) Number of epochs against Test set MSE without learning rate decay'}
+par(mfrow=c(1,2))
+data <- read.csv('results/decay_results.csv')
+data<-data[order(data$decay_rate),]
+m <- lm(data=data,test_error~decay_rate)
+plot(data$decay_rate,data$test_err,xlab='Decay Rate',ylab='Test set MSE')
+points(data$decay_rate,predict(m),t='l')
+
+data2 <- read.csv('models/decay_test/no_decay/2019-08-08_13-44-50/loss.csv',header=F)
+plot(data2$V1,data2$V4,t='l',ylab='Test set MSE',xlab='epochs')
+```
+
+Model performance degraded as learning rate decay became more aggressive.  It was expected that small to moderate amounts of decay would improve performance; however, this was not observed.  One reason for this could be that the learning curve has not flattened enough for a reduced learning rate to be of any benefit (See Figure 4 -- Right).  For this reason, a decay rate of 0.995 was selected as it did not appear to harm performance; however, it may still provide benefits during longer periods of training.
+
+
+## Experimenting with Different Numbers of Filters
+Crudely speaking, each filter corresponds to a different feature the network attempts to learn.  Understandably then, increasing the number of filters can help to improve predictive power.  However, this also increases the number of trainable parameters in the network resulting in a higher propensity for overfitting as well as increased computational complexity.
+
+At each convolutional layer in the network, a certain number of filters is learned for each input channel.  Therefore, if there are $n$ input channels and $f$ filters per channel, then $nf$ channels will be output to the next layer.  Up until this point, models have been trained with 2 filters per channel per layer, so the number of channels in the convolutional layers follows the sequence $\{4, 8, 16, 32, 64, 128\}$. The purpose of this next experiment is to attempt to determine the ideal number of filters at each layer.  Due to the combinatorial nature of possibilities here, it is not practical to perform an exhaustive search through the problem space. Table 2 summarizes the combinations that were tried, and Table 3 gives their results.
+
+```{r,echo=F}
+x<-c('1-1-1-1-1','1-1-1-1-2','1-1-1-2-2','1-1-2-2-2','1-2-2-2-2','','2-1-1-1-1','2-2-1-1-1','2-2-2-1-1','2-2-2-2-1','2-2-2-2-2','2-2-2-2-3','2-2-2-3-3','2-2-3-3-3','2-3-3-3-3','','3-2-2-2-2','3-3-2-2-2','3-3-3-2-2','3-3-3-3-2','','2-2-2-2-4','2-2-2-4-4','2-2-4-4-4','2-4-4-4-4','','4-2-2-2-2','4-4-2-2-2','4-4-4-2-2','4-4-4-4-2','3-3-3-3-3','','','','')
+m<-(matrix(x,nrow=7,ncol=5,byrow=T))
+kable(m,caption='Various filter sequences explored by experiment')
+```
+
+```{r,echo=F}
+data<-read.csv('results/filters_test.csv')
+kable(data,caption='Test set MSE results for filter sequence tests')
+```
+
+
+## Experimenting with Weight Decay
+
+## Final Model
+
+# Conclusions
+
+## Limitations and Further Work
+
+\newpage
+# Bibliography
