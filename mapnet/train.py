@@ -214,6 +214,7 @@ def test_model(
         loss_func: Callable[[float,float],None],
         cuda: Optional[bool]=False,
         show_progress: Optional[bool]=False,
+        print_preds: Optional[bool]=False
     )->float:
     """
     Return the average loss over the provided dataset.
@@ -235,6 +236,10 @@ def test_model(
             y = model(x)
             loss = loss_func(y,label.view(-1,model.output_size))
             total_loss += float(loss.item())
+            if(print_preds):
+                zipped = zip(y.view(-1,1),label.view(-1,1))
+                for z in zipped:
+                    print(','.join([str(float(q)) for q in z]))
         test_loss = total_loss/(index+1)
     return test_loss
     
@@ -517,10 +522,16 @@ def _get_parser():
         help="NOT IMPLEMENTED"
     )
     parser.add_argument(
+        "--print-preds",
+        action="store_true",
+        #help="Set flag for quiet training"
+        help="NOT IMPLEMENTED"
+    )
+    parser.add_argument(
         "--test-model",
         type=str,
         metavar='[str]',
-        choices=['test','train'],
+        choices=['test','train','validate'],
         default=None,
         help="Instead of training the loaded model, it's performance will be assessed on either the test or train set. ['test','train']"
     )
@@ -664,6 +675,27 @@ if __name__ == '__main__':
     )
 
     ###########################################################################
+    # Loading Validate Data
+    ###########################################################################
+    if not args.silent:
+        print("Fetching validate data ...")
+    validate_dict = get_sample_dict(
+        datapath=args.datapath,
+        dataset='validate'
+        )
+    validate_ages = get_sample_ages(
+        ids=validate_dict.keys(),
+        path_to_csv=os.path.join(args.datapath,'subject_info.csv')
+    )
+    conv_validate_ages = convert_targets(validate_ages,args.model_output)
+    validate_ds = NiftiDataset(
+        samples=validate_dict,
+        labels=conv_validate_ages, 
+        scale_inputs=args.scale_inputs,
+        cache_images=False
+    )
+
+    ###########################################################################
     # Initializing Model
     ###########################################################################
     if args.load_model is None:
@@ -697,7 +729,24 @@ if __name__ == '__main__':
             print("Loading model ...")
         if not os.path.exists(args.load_model):
             raise ValueError("Cannot load model -- {} does not exist".format(args.load_model))
-        model = torch.load(args.load_model)
+        model_in = torch.load(args.load_model)
+        model = MAPnet(
+            input_shape=train_ds.image_shape,
+            n_conv_layers=args.conv_layers,
+            padding=args.padding,
+            dilation=args.dilation,
+            kernel=args.kernel_size,
+            stride=args.stride,
+            filters=args.filters,
+            input_channels=train_ds.images_per_subject,
+            conv_actv=[actv_funcs[x] for x in args.conv_actv],
+            fc_actv=[actv_funcs[x] for x in args.fc_actv],
+            even_padding=args.even_padding,
+            pool=args.pooling,
+            output_size=len(conv_train_ages[0])
+            #output_size=1
+        )
+        model.load_state_dict(model_in.state_dict())
         # a quick hack to allow for backwards compatibility
         if not hasattr(model,'even_padding'):
             model.even_padding = False
@@ -719,6 +768,8 @@ if __name__ == '__main__':
     # Print out model info ...
     ###########################################################################
     if not args.silent:
+        pass
+        """
         summary(
             model,
             input_size = tuple(np.concatenate(
@@ -726,12 +777,16 @@ if __name__ == '__main__':
             )),
             device = "cuda" if args.cuda else "cpu"
         )    
+        """
 
     if args.test_model is not None:
         ###########################################################################
         # Run a test of the model instead of a training
         ###########################################################################
-        run_set = train_ds if args.test_model == 'train' else test_ds
+        if args.test_model == 'validate':
+            run_set = validate_ds
+        else:
+            run_set = train_ds if args.test_model == 'train' else test_ds
         data_loader = DataLoader(
             run_set, 
             num_workers=args.workers,
@@ -743,7 +798,8 @@ if __name__ == '__main__':
             model,
             data_loader,
             loss_funcs[args.loss](),
-            args.cuda,show_progress=True
+            args.cuda,show_progress=True,
+            print_preds=args.print_preds
         )
         print("Total loss for the {} set is {}".format(
                 args.test_model,
