@@ -239,8 +239,7 @@ def test_model(
             if(print_preds):
                 zipped = zip(y.view(-1,1),label.view(-1,1))
                 for z in zipped:
-                    print(','.join([str(int(q)) for q in z]))
-
+                    print(','.join([str(float(q)) for q in z]))
         test_loss = total_loss/(index+1)
     return test_loss
     
@@ -523,6 +522,12 @@ def _get_parser():
         help="NOT IMPLEMENTED"
     )
     parser.add_argument(
+        "--print-preds",
+        action="store_true",
+        #help="Set flag for quiet training"
+        help="NOT IMPLEMENTED"
+    )
+    parser.add_argument(
         "--test-model",
         type=str,
         metavar='[str]',
@@ -697,6 +702,27 @@ if __name__ == '__main__':
 
 
     ###########################################################################
+    # Loading Validate Data
+    ###########################################################################
+    if not args.silent:
+        print("Fetching validate data ...")
+    validate_dict = get_sample_dict(
+        datapath=args.datapath,
+        dataset='validate'
+        )
+    validate_ages = get_sample_ages(
+        ids=validate_dict.keys(),
+        path_to_csv=os.path.join(args.datapath,'subject_info.csv')
+    )
+    conv_validate_ages = convert_targets(validate_ages,args.model_output)
+    validate_ds = NiftiDataset(
+        samples=validate_dict,
+        labels=conv_validate_ages, 
+        scale_inputs=args.scale_inputs,
+        cache_images=False
+    )
+
+    ###########################################################################
     # Initializing Model
     ###########################################################################
     if args.load_model is None:
@@ -730,7 +756,24 @@ if __name__ == '__main__':
             print("Loading model ...")
         if not os.path.exists(args.load_model):
             raise ValueError("Cannot load model -- {} does not exist".format(args.load_model))
-        model = torch.load(args.load_model)
+        model_in = torch.load(args.load_model)
+        model = MAPnet(
+            input_shape=train_ds.image_shape,
+            n_conv_layers=args.conv_layers,
+            padding=args.padding,
+            dilation=args.dilation,
+            kernel=args.kernel_size,
+            stride=args.stride,
+            filters=args.filters,
+            input_channels=train_ds.images_per_subject,
+            conv_actv=[actv_funcs[x] for x in args.conv_actv],
+            fc_actv=[actv_funcs[x] for x in args.fc_actv],
+            even_padding=args.even_padding,
+            pool=args.pooling,
+            output_size=len(conv_train_ages[0])
+            #output_size=1
+        )
+        model.load_state_dict(model_in.state_dict())
         # a quick hack to allow for backwards compatibility
         if not hasattr(model,'even_padding'):
             model.even_padding = False
@@ -752,6 +795,8 @@ if __name__ == '__main__':
     # Print out model info ...
     ###########################################################################
     if not args.silent:
+        pass
+        """
         summary(
             model,
             input_size = tuple(np.concatenate(
@@ -759,6 +804,7 @@ if __name__ == '__main__':
             )),
             device = "cuda" if args.cuda else "cpu"
         )    
+        """
 
     if args.test_model is not None:
         ###########################################################################
@@ -768,7 +814,10 @@ if __name__ == '__main__':
             run_set = validate_ds
         else:
             run_set = train_ds if args.test_model == 'train' else test_ds
+<<<<<<< HEAD
 
+=======
+>>>>>>> 49b6da609da3fdf0ceb3b51dfbce5bbb3f3bfd05
         data_loader = DataLoader(
             run_set, 
             num_workers=args.workers,
@@ -780,8 +829,12 @@ if __name__ == '__main__':
             model,
             data_loader,
             loss_funcs[args.loss](),
+<<<<<<< HEAD
             args.cuda,
             show_progress=False,
+=======
+            args.cuda,show_progress=True,
+>>>>>>> 49b6da609da3fdf0ceb3b51dfbce5bbb3f3bfd05
             print_preds=args.print_preds
         )
         print("Total loss for the {} set is {}".format(

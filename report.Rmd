@@ -33,10 +33,10 @@ Predicting brain age refers to the estimation of an individual's age using only 
 
 MRI is a medical imaging technique that utilizes strong magnetic fields and gradients in order to measure various properties of brain tissues.  There are many approaches, commonly referred to as modalities, each measuring different aspects of the brain.  For example, T1 and T2 FLAIR images are commonly used to construct detailed anatomical images, whereas fMRI is used to measure changes in blood oxygen levels and is said to be reflective of brain activity.  Reconstructed images are typically 3 or 4 dimensions and are on the order of 1 million voxels, or volumetric pixels, per 3D volume.
 
-The large number of datapoints within a single image can present signficant complications when it comes to making predictions from MRI data.  As a result most approaches have involved feature extraction to reduce the data's high dimensionality. Both @valizadeh_age_2017 and @aycheh_biological_2018 used measurements of anatomical regions (e.g cortical volume and thickness) derived from T1 MRI images to predict brain age. However, feature extraction can be a complicated process requiring in-depth domain knowledge and extensive quality control proceedures.  Furthermore, potentially relevent information is likely to be lost during the feature extraction process which can have negative impacts on the predictive power of a model.
+The large number of datapoints within a single image can present signficant complications when it comes to making predictions from MRI data.  As a result, most approaches have involved feature extraction to reduce the data's high dimensionality. Both @valizadeh_age_2017 and @aycheh_biological_2018 used measurements of anatomical regions (e.g cortical volume and thickness) derived from T1 MRI images to predict brain age. However, feature extraction can be a complicated process requiring in-depth domain knowledge and extensive quality control proceedures.  Furthermore, potentially relevent information is likely to be lost during the feature extraction process which can have negative impacts on the predictive power of a model.
 
 ## Proposed Solution
-From handwritten digit recognition [@ciresan_convolutional_2011] to object recognition [@krizhevsky_imagenet_2012], 2D convolutional neural networks (CNNs) have been successfully utilized to solve many complicated computer vision tasks in recent years.  This success extends to medical imaging, where 3D CNNs have been used for the segmentation of brain tumors [@pereira_brain_2016] as well as the classification of Alzheimer's Disease [@payan_predicting_2015] from preprocessed MRI data.  CNNs learn features directly from the training data effectively sidestepping the feature development process and problems mentioned above (albeit by introducing the complication of training a deep learning model).
+From handwritten digit recognition [@ciresan_convolutional_2011] to object recognition [@krizhevsky_imagenet_2012], 2D convolutional neural networks (CNNs) have been successfully utilized to solve many complicated computer vision tasks in recent years.  This success extends to medical imaging, where 3D CNNs have been used for the segmentation of brain tumors [@pereira_brain_2016] as well as the classification of Alzheimer's Disease [@payan_predicting_2015] from preprocessed MRI data.  CNNs learn features directly from the training data. This effectively sidesteps the feature development process and problems mentioned above albeit by introducing the complication of training a deep learning model.
 
 The aim of this work is to develop a neural network utilizing 3D convolutional layers for the purpose of predicting age from MRI data alone.  An experimental framework will be developed to fascilitate the exploration of various network architectures and training parameters. Subsequently, a range of experiments will be conducted to determine how performance changes when certain parameters are adjusted.  The results of these experiments will guide the model development.  Finally, model performance will be assessed on a held-out set of data not previously used during model development.
 
@@ -72,14 +72,14 @@ m <- mean(data$age,na.rm=T)
 s <- sd(data$age,na.rm=T)
 mse <- mean((data$age-m)^2,na.rm=T)
 ```
-The cohort has a mean age of `r m` with a standard deviation of `r s`.  For reference to later results, a model which predicts the population mean would have an expected Mean-Squared Error (MSE) of `r mse`.
+The cohort has a mean age of `r m` with a standard deviation of `r s`.  It worth noting that a model which predicts the population mean would have an expected Mean-Squared Error (MSE) of `r mse`.
 
-```{r,echo=F,fig.cap='Histogram of Subject Ages',fig.width=3,fig.height=3}
+```{r,echo=F,fig.cap='Histogram of Subject Ages'}
 hist(data$age,xlab='age',main='')
 ```
 
 ## Train, Test, and Validation Sets
-A total of 17915 subjects have been used for this project.  This has been randomly partitioned into train, test, and validation sets wth respective sizes of 13915, 2000, and 2000.  The train set will be used to train the model, the test set will be used to asses model performance during model development, and the valiation set will be used to assess the final model performance.
+A total of 17915 subjects have been used for this project.  This has been randomly partitioned into train, test, and validation sets with respective sizes of 13915, 2000, and 2000.  The training set will be used to train the model, the test set will be used to asses model performance during model development, and the valiation set will be used to assess the final model performance.
 
 ## Experimental Framework
 
@@ -208,7 +208,7 @@ optional arguments:
 # Experiments & Results 
 
 ## Initial Model
-The initial model consisted of 5 3D convolutional layers with a dilation of 1, stride of 1, no padding and max pooling between layers.  Kernel sizes for each layer were 5, 4, 4, 2, and 2 respectively, and filters per channel at each layer are 2 so that there are 128 channels after the last convolutional layer.  These channels are flattened and concatenated with 50% dropout being applied.  Three fully connected layers then gradually reduce the number of nodes to 1, which is taken to be the output.  Exponential linear units (elu) were used as the activation function for each layer.
+The initial model consisted of 5 3D convolutional layers with a dilation of 1, stride of 1, no padding and max pooling between layers.  Kernel sizes for each layer were 5, 4, 4, 2, and 2 respectively, and filters per channel at each layer are 2 so that there are 128 channels after the last convolutional layer.  These channels are flattened and concatenated with 50% dropout being applied.  Three fully connected layers then gradually reduce the number of nodes down to 1, which is used as the output of the model.  Exponential linear units (elu) were used as the activation function for each layer.
 
 For training, target ages were scaled by dividing by 100, and Mean Squared Error (MSE) loss was used alongside an Adam optimizer with default settings of 0.99 and 0.999 for $\beta_1$ and $\beta_2$ respectively. Weight initialization was performed by the `kaiming-uniform` method.  Model performance is assessed on the training set at the end of each epoch.
 
@@ -368,7 +368,7 @@ The next experiment investigated the effect of learning rate decay on model perf
 
 \[\eta_{i+1} = \lambda \eta_i , 0<\lambda\leq 1 \]
 
-where $\eta_i$ is the learning rate at the $i^{th}$ epoch and $\lambda$ is the decay factor. Models with $\lambda = 0.90, 0.905, 0.91, ... , 0.995, 1.0$ were trained and their best MSE on the test set across 40 epochs was used for comparison with the other models.  Figure 4 -- Left summarizes the results.
+where $\eta_i$ is the learning rate at the $i^{th}$ epoch and $\lambda$ is the decay factor.  Models with $\lambda = 0.90, 0.905, 0.91, ... , 0.995, 1.0$ were trained and their best MSE on the test set across 40 epochs was used for comparison with the other models.  Figure 4 -- Left summarizes the results.
 
 ```{r, echo=F,fig.cap='(Left) Learning rate decay against Test set MSE (Right) Number of epochs against Test set MSE without learning rate decay'}
 par(mfrow=c(1,2))
@@ -388,7 +388,7 @@ Model performance degraded as learning rate decay became more aggressive.  It wa
 ## Experimenting with Different Numbers of Filters
 Crudely speaking, each filter corresponds to a different feature the network attempts to learn.  Understandably then, increasing the number of filters can help to improve predictive power.  However, this also increases the number of trainable parameters in the network resulting in a higher propensity for overfitting as well as increased computational complexity.
 
-At each convolutional layer in the network, a certain number of filters is learned for each input channel.  Therefore, if there are $n$ input channels and $f$ filters per channel, then $nf$ channels will be output to the next layer.  Up until this point, models have been trained with 2 filters per channel per layer, so the number of channels in the convolutional layers follows the sequence $\{4, 8, 16, 32, 64, 128\}$. The purpose of this next experiment is to attempt to determine the ideal number of filters at each layer.  Due to the combinatorial nature of possibilities here, it is not practical to perform an exhaustive search through the problem space. Table 2 summarizes the combinations that were tried, and Table 3 gives their results.
+At each convolutional layer in the network, a certain number of filters is learned for each input channel.  Therefore, if there are $n$ input channels and $f$ filters per channel, then $nf$ channels will be output to the next layer.  Up until this point, models have been trained with 2 filters per channel per layer, so the number of channels in the convolutional layers follows the sequence $\{4, 8, 16, 32, 64, 128\}$. The purpose of this next experiment is to attempt to determine the ideal number of filters at each layer.  Due to the combinatorial nature of possibilities here, it is not practical to perform an exhaustive search through the problem space. Table 2 summarizes the combinations that were tried. As before, each model was trained for 40 epochs and the best MSE score was used to compare with other models.  The results are summarized in Table 3.
 
 ```{r,echo=F}
 x<-c('1-1-1-1-1','1-1-1-1-2','1-1-1-2-2','1-1-2-2-2','1-2-2-2-2','','2-1-1-1-1','2-2-1-1-1','2-2-2-1-1','2-2-2-2-1','2-2-2-2-2','2-2-2-2-3','2-2-2-3-3','2-2-3-3-3','2-3-3-3-3','','3-2-2-2-2','3-3-2-2-2','3-3-3-2-2','3-3-3-3-2','','2-2-2-2-4','2-2-2-4-4','2-2-4-4-4','2-4-4-4-4','','4-2-2-2-2','4-4-2-2-2','4-4-4-2-2','4-4-4-4-2','3-3-3-3-3','','','','')
@@ -398,17 +398,140 @@ kable(m,caption='Various filter sequences explored by experiment')
 
 ```{r,echo=F}
 data<-read.csv('results/filters_test.csv')
-kable(data,caption='Test set MSE results for filter sequence tests')
+kable(data,caption='Test set MSE results for filter sequence tests in order of performance')
 ```
 
+The best performing model had 3 filters per channel at each layer and obtained an MSE of 3.297e-03 within the first 40 epochs.  In general, models with higher numbers of total filters, and therefore parameters, performed better.  Furthermore, models with a higher number of filters in the beginning layers outperformed those with the same number of filters, but introduced later on.  That is, 3-3-3-2 (rank 3) is preferable to 2-3-3-3-3 (rank 10).  Unfortunately, filter numbers could not be increased beyond the amounts tested due to limitations on hardware.
 
-## Experimenting with Weight Decay
+## Experimenting with Weight Decay (L2 Regularization)
+Weight decay is a technique that involves adding an extra penalization term to the base loss function to encourage the network to keep the weights small.  In the case of L2 Regularization with MSE loss, the new loss function becomes:
+\[ L(\boldsymbol{y},\boldsymbol{\hat{y}},\boldsymbol{w}) = \frac{1}{n}\sum_{i=1}^n(y_i-\hat{y_i})^2 + \frac{1}{2}c||\boldsymbol{w}||^2 \]
+where $c$ is a constant term controlling how heavily large weights should be penalized.
+
+Larger values of $c$ can help the model generalize better to unseen data and prevent the model from relying too heavily on any one feature or input; however, if set too high, weight decay can prevent the model from learning.  Several models were trained to test the effect of setting $c$ to 0 (no decay), 1e-05, 5e-05, 1e-04, 5e-04, and 1e-03.  Models were trained for 60 epochs, and the results are summarized in Figure 5.
+
+```{r,echo=F,fig.cap='The effect of weight decay on Test set MSE.  The red line shows the baseline model without any decay, and the black line shows the results of varying weight decay'}
+data <- read.csv('results/weight_decay_results.csv')
+data<-data[order(data$weight_decay),]
+plot(data,log='x',xlab='weight decay parameter',ylab='Test set MSE',t='l')
+abline(0.00290505,0,col='red')
+legend(2e-04,0.00305,legend=c('baseline (c=0)','weight decay'),col=c('red','black'),lty=1)
+```
+
+The effect of weight decay on model performance is unclear, and no obvious trend was observed in the collected data.  Only one model with weight decay outperformed the model without weight decay, however, it is unclear whether this is a significant effect.  
+
+This "top-performing" model had $c=$ 1e-05 and obtained an MSE of 2.85e-03 on the Test set.  This is in comparison to the baseline model's performance of 2.91e-03.  Although the effect of weight decay is unclear, $c=$ 1e-05 will be used for the final model as it did technically outperform the baseline model, and the utility of weight decay is well documented in existing literature.
 
 ## Final Model
 
+The final model to be used will be the top performing model from section 3.6.  Listing 3 summarizes the parameters used to train the model as well as the model archicture.
+
+\begin{lstlisting}[basicstyle=\small,caption='Final Model Specification']
+scale_inputs:       True
+conv_layers:        5
+kernel_size:        [5, 4, 4, 2, 2]
+dilation:           [1]
+padding:            [2]
+even_padding:       True
+stride:             [1]
+filters:            [3, 3, 3, 3, 3]
+weight_init:        kaiming-uniform
+conv_actv:          ['tanh']
+fc_actv:            ['sigmoid']
+pooling:            max
+model_output:       scaled-value
+lr:                 0.0001
+decay:              0.995
+batch_size:         64
+epochs:             60
+cuda:               True
+loss:               L2
+optim:              adam
+weight_decay:       1e-05
+beta1:              0.9
+beta2:              0.999
+amsgrad:            False
+
+----------------------------------------------------------------
+        Layer (type)               Output Shape         Param #
+================================================================
+     ConstantPad3d-1      [-1, 4, 104, 104, 72]               0
+            Conv3d-2     [-1, 12, 100, 100, 68]           1,512
+         MaxPool3d-3       [-1, 12, 50, 50, 34]               0
+     ConstantPad3d-4       [-1, 12, 50, 50, 34]               0
+            Conv3d-5       [-1, 36, 47, 47, 31]           2,340
+         MaxPool3d-6       [-1, 36, 24, 24, 16]               0
+     ConstantPad3d-7       [-1, 36, 24, 24, 16]               0
+            Conv3d-8      [-1, 108, 21, 21, 13]           7,020
+         MaxPool3d-9       [-1, 108, 11, 11, 7]               0
+    ConstantPad3d-10       [-1, 108, 11, 11, 7]               0
+           Conv3d-11       [-1, 324, 10, 10, 6]           2,916
+        MaxPool3d-12         [-1, 324, 5, 5, 3]               0
+    ConstantPad3d-13         [-1, 324, 5, 5, 3]               0
+           Conv3d-14         [-1, 972, 4, 4, 2]           8,748
+        MaxPool3d-15         [-1, 972, 2, 2, 1]               0
+          Dropout-16                 [-1, 3888]               0
+           Linear-17                 [-1, 1944]       7,560,216
+           Linear-18                  [-1, 100]         194,500
+           Linear-19                    [-1, 1]             101
+================================================================
+Total params: 7,777,353
+Trainable params: 7,777,353
+Non-trainable params: 0
+----------------------------------------------------------------
+Input size (MB): 11.88
+Forward/backward pass size (MB): 133.74
+Params size (MB): 29.67
+Estimated Total Size (MB): 175.29
+----------------------------------------------------------------
+\end{lstlisting}
+
+This model was trained for 60 epochs and MSE on the Test set was calculated at the end of each epoch.  The lowest MSE on the Test set occurred after 56 epochs acheiving an MSE of 2.85e-03.  Figure 6 shows the training curve.
+
+```{r,echo=F,fig.cap='Training Epochs against MSE on the Test for the final model'}
+data<-read.csv('models/final_model/2019-08-10_12-56-46/loss.csv',header=F)
+plot(data$V1,data$V4,t='l',ylab='Test set MSE',xlab='epochs')
+```
+
+As a final measure of performance, the model was tested on the validation set which hasn't been used in training up to this point.  Figure 7 shows a scatterplot of predicted age versus actual age for this test.
+
+```{r,echo=F,fig.cap='Scatterplot of predicted age against actual age'}
+ages <- read.csv('results/validation_ages.csv')
+plot(ages$prediction,ages$actual,xlab='predicted age',ylab='actual age',cex=0.5,pch=16)
+preds <- ages$prediction
+truth <- ages$actual
+final_r<-cor(preds,truth)
+final_mse <- mean((preds-truth)^2)
+final_mae <- mean(abs(preds-truth))
+
+mean_mse <- mean((truth-mean(truth))^2)
+mean_mae <- mean(abs(truth-mean(truth)))
+mean_r <- cor(truth,mean(truth))
+```
+
+When assessed against the validation set, this model achieved a mean squared error of `r final_mse`, a mean absolute error (MAE) of `r final_mae` (or `r 100*final_abserr` years), and an $R^2$ of `r final_r^2`.
+
 # Conclusions
 
+## Comparison with "Predicting the Mean"
+Simply predicting the mean would result in a MSE of `r mean_mse`, an MAE of `r mean_mae`, and an $R^2$ of `r mean_r^2`.  Therefore, it is fair to say that this model significantly improves upon a worst-case model.
+
+## Comparison with State-of-the-Art
+Several other studies have also created brain age prediction models:
+
+- @aycheh_biological_2018 used a gaussian process regression model and obtained a mean absolute error of 4.05 years
+- @wang_mri-based_2011 used hidden markov models to predict age with "an average normalized age-gap error of two to three years"
+- @li_brain_2018 used CNNs trained on fMRI connectivity data and obtained an absolute mean error of 2.15 years
+- @cole_prediction_2015 obtained an $R^2$ of 0.85 using a gaussian process regression when trained on healthy subjects
+- @valizadeh_age_2017 achieved an $R^2$ of 0.84 using neural networks and support vector machines
+
+Although this model was unable to match the performance of any of the above studies, it is worth noting that they each required extensive processing pipelines in order to extract relevent features.  The processing for this model was very minimalistic only requiring standard DTI maps and alignment to a common template.
+
 ## Limitations and Further Work
+
+There are several aspects of the experimental framework which were unable to be explored due to limited time and discussion space.  Further improvements could be made by exploring alternative optimizers and corresponding parameters, weight initialization proceedures, loss functions, and alternative target embeddings.  These were initially planned, however, they were unable to be completed in the limited timeframe of this project.
+
+Furthermore, in the results of 3.5, we observed that a higher number of filters introduced early on was preferable to introducing the same number of filters but more slowly.  Further work may investigate whether this phenomenon holds in more extreme cases (e.g 3-3-3-3-3 vs 243-1-1-1-1).
 
 \newpage
 # Bibliography
