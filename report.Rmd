@@ -506,15 +506,14 @@ final_mae <- mean(abs(preds-truth))
 
 mean_mse <- mean((truth-mean(truth))^2)
 mean_mae <- mean(abs(truth-mean(truth)))
-mean_r <- cor(truth,mean(truth))
 ```
 
-When assessed against the validation set, this model achieved a mean squared error of `r final_mse`, a mean absolute error (MAE) of `r final_mae` (or `r 100*final_abserr` years), and an $R^2$ of `r final_r^2`.
+When assessed against the validation set, this model achieved a mean squared error of `r final_mse`, a mean absolute error (MAE) of `r final_mae` (or `r 100*final_mae` years), and an $R^2$ of `r final_r^2`.
 
 # Conclusions
 
 ## Comparison with "Predicting the Mean"
-Simply predicting the mean would result in a MSE of `r mean_mse`, an MAE of `r mean_mae`, and an $R^2$ of `r mean_r^2`.  Therefore, it is fair to say that this model significantly improves upon a worst-case model.
+Simply predicting the mean would result in a MSE of `r mean_mse`, an MAE of `r mean_mae`.  Therefore, it is fair to say that this model significantly improves upon a worst-case model.
 
 ## Comparison with State-of-the-Art
 Several other studies have also created brain age prediction models:
