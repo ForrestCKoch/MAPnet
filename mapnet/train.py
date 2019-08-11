@@ -214,6 +214,7 @@ def test_model(
         loss_func: Callable[[float,float],None],
         cuda: Optional[bool]=False,
         show_progress: Optional[bool]=False,
+        print_preds: Optional[bool]=False
     )->float:
     """
     Return the average loss over the provided dataset.
@@ -235,6 +236,11 @@ def test_model(
             y = model(x)
             loss = loss_func(y,label.view(-1,model.output_size))
             total_loss += float(loss.item())
+            if(print_preds):
+                zipped = zip(y.view(-1,1),label.view(-1,1))
+                for z in zipped:
+                    print(','.join([str(int(q)) for q in z]))
+
         test_loss = total_loss/(index+1)
     return test_loss
     
@@ -520,9 +526,15 @@ def _get_parser():
         "--test-model",
         type=str,
         metavar='[str]',
-        choices=['test','train'],
+        choices=['test','train','validate'],
         default=None,
         help="Instead of training the loaded model, it's performance will be assessed on either the test or train set. ['test','train']"
+    )
+    parser.add_argument(
+        "--print-preds",
+        action="store_true",
+        #help="Set flag for quiet training"
+        help="NOT IMPLEMENTED"
     )
 
     ###########################################################################
@@ -620,48 +632,69 @@ if __name__ == '__main__':
         for arg in vars(args):
             print('{0:20}{1}'.format(arg+':',getattr(args,arg)))
         print('')
+    if args.test_model == 'validate':
+            ###########################################################################
+            # Loading Validate data
+            ###########################################################################
+            if not args.silent:
+                print("Fetching validation data ...")
+            valid_dict = get_sample_dict(
+                datapath=args.datapath,
+                dataset='validate'
+                )
+            valid_ages = get_sample_ages(
+                ids=valid_dict.keys(),
+                path_to_csv=os.path.join(args.datapath,'subject_info.csv')
+            )
+            conv_valid_ages = convert_targets(valid_ages,args.model_output)
+            validate_ds = NiftiDataset(
+                samples=valid_dict,
+                labels=conv_valid_ages, 
+                scale_inputs=args.scale_inputs,
+                cache_images=False
+            )
+    else:
+            ###########################################################################
+            # Loading Training Data
+            ###########################################################################
+            if not args.silent:
+                print("Fetching training data ...")
+            train_dict = get_sample_dict(
+                datapath=args.datapath,
+                dataset='train'
+            )
+            train_ages = get_sample_ages(
+                ids=train_dict.keys(),
+                path_to_csv=os.path.join(args.datapath,'subject_info.csv')
+            )
+            conv_train_ages = convert_targets(train_ages,args.model_output)
+            train_ds = NiftiDataset(
+                samples=train_dict,
+                labels=conv_train_ages,
+                scale_inputs=args.scale_inputs
+            )
 
+            ###########################################################################
+            # Loading Testing Data
+            ###########################################################################
+            if not args.silent:
+                print("Fetching test data ...")
+            test_dict = get_sample_dict(
+                datapath=args.datapath,
+                dataset='test'
+                )
+            test_ages = get_sample_ages(
+                ids=test_dict.keys(),
+                path_to_csv=os.path.join(args.datapath,'subject_info.csv')
+            )
+            conv_test_ages = convert_targets(test_ages,args.model_output)
+            test_ds = NiftiDataset(
+                samples=test_dict,
+                labels=conv_test_ages, 
+                scale_inputs=args.scale_inputs,
+                cache_images=False
+            )
 
-    ###########################################################################
-    # Loading Training Data
-    ###########################################################################
-    if not args.silent:
-        print("Fetching training data ...")
-    train_dict = get_sample_dict(
-        datapath=args.datapath,
-        dataset='train'
-    )
-    train_ages = get_sample_ages(
-        ids=train_dict.keys(),
-        path_to_csv=os.path.join(args.datapath,'subject_info.csv')
-    )
-    conv_train_ages = convert_targets(train_ages,args.model_output)
-    train_ds = NiftiDataset(
-        samples=train_dict,
-        labels=conv_train_ages,
-        scale_inputs=args.scale_inputs
-    )
-
-    ###########################################################################
-    # Loading Testing Data
-    ###########################################################################
-    if not args.silent:
-        print("Fetching test data ...")
-    test_dict = get_sample_dict(
-        datapath=args.datapath,
-        dataset='test'
-        )
-    test_ages = get_sample_ages(
-        ids=test_dict.keys(),
-        path_to_csv=os.path.join(args.datapath,'subject_info.csv')
-    )
-    conv_test_ages = convert_targets(test_ages,args.model_output)
-    test_ds = NiftiDataset(
-        samples=test_dict,
-        labels=conv_test_ages, 
-        scale_inputs=args.scale_inputs,
-        cache_images=False
-    )
 
     ###########################################################################
     # Initializing Model
@@ -731,7 +764,11 @@ if __name__ == '__main__':
         ###########################################################################
         # Run a test of the model instead of a training
         ###########################################################################
-        run_set = train_ds if args.test_model == 'train' else test_ds
+        if args.test_model == 'validate':
+            run_set = validate_ds
+        else:
+            run_set = train_ds if args.test_model == 'train' else test_ds
+
         data_loader = DataLoader(
             run_set, 
             num_workers=args.workers,
@@ -743,7 +780,9 @@ if __name__ == '__main__':
             model,
             data_loader,
             loss_funcs[args.loss](),
-            args.cuda,show_progress=True
+            args.cuda,
+            show_progress=False,
+            print_preds=args.print_preds
         )
         print("Total loss for the {} set is {}".format(
                 args.test_model,

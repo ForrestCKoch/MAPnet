@@ -18,7 +18,7 @@ def get_sample_dict(
     :param datapath: path to the data folder
     :param dataset: either 'train' or 'test'
     """
-    if (dataset != 'train') and (dataset != 'test'):
+    if (dataset != 'train') and (dataset != 'test') and (dataset != 'validate'):
         raise ValueError('Invalid dataset')
     if not os.path.isdir(os.path.join(datapath,dataset)):
         raise ValueError('Invalid data path')
