@@ -243,7 +243,7 @@ class MAPnet(nn.Module):
                     dilation=dilation[i], 
                     groups=int(self.n_channels[-2]), 
                     bias=True, 
-                    padding_mode='zeros'
+                    #padding_mode='zeros'
                 )
             )
             if self.pool:
