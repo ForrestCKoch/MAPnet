@@ -410,7 +410,7 @@ where $c$ is a constant term controlling how heavily large weights should be pen
 
 Larger values of $c$ can help the model generalize better to unseen data and prevent the model from relying too heavily on any one feature or input; however, if set too high, weight decay can prevent the model from learning.  Several models were trained to test the effect of setting $c$ to 0 (no decay), 1e-05, 5e-05, 1e-04, 5e-04, and 1e-03.  Models were trained for 60 epochs, and the results are summarized in Figure 5.
 
-```{r,echo=F,fig.cap='The effect of weight decay on Test set MSE.  The red line shows the baseline model without any decay, and the black line shows the results of varying weight decay'}
+```{r,echo=F,fig.cap='The effect of weight decay on Test set MSE.  The red line shows the baseline model without any decay, and the black line shows the results of varying weight decay',message=F,warning=F}
 data <- read.csv('results/weight_decay_results.csv')
 data<-data[order(data$weight_decay),]
 plot(data,log='x',xlab='weight decay parameter',ylab='Test set MSE',t='l')
