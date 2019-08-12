@@ -535,12 +535,6 @@ def _get_parser():
         default=None,
         help="Instead of training the loaded model, it's performance will be assessed on either the test or train set. ['test','train']"
     )
-    parser.add_argument(
-        "--print-preds",
-        action="store_true",
-        #help="Set flag for quiet training"
-        help="NOT IMPLEMENTED"
-    )
 
     ###########################################################################
     # not implemented
