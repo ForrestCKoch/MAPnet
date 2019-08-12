@@ -410,7 +410,7 @@ where $c$ is a constant term controlling how heavily large weights should be pen
 
 Larger values of $c$ can help the model generalize better to unseen data and prevent the model from relying too heavily on any one feature or input; however, if set too high, weight decay can prevent the model from learning.  Several models were trained to test the effect of setting $c$ to 0 (no decay), 1e-05, 5e-05, 1e-04, 5e-04, and 1e-03.  Models were trained for 60 epochs, and the results are summarized in Figure 5.
 
-```{r,echo=F,fig.cap='The effect of weight decay on Test set MSE.  The red line shows the baseline model without any decay, and the black line shows the results of varying weight decay'}
+```{r,echo=F,fig.cap='The effect of weight decay on Test set MSE.  The red line shows the baseline model without any decay, and the black line shows the results of varying weight decay',message=F,warning=F}
 data <- read.csv('results/weight_decay_results.csv')
 data<-data[order(data$weight_decay),]
 plot(data,log='x',xlab='weight decay parameter',ylab='Test set MSE',t='l')
@@ -506,15 +506,14 @@ final_mae <- mean(abs(preds-truth))
 
 mean_mse <- mean((truth-mean(truth))^2)
 mean_mae <- mean(abs(truth-mean(truth)))
-mean_r <- cor(truth,mean(truth))
 ```
 
-When assessed against the validation set, this model achieved a mean squared error of `r final_mse`, a mean absolute error (MAE) of `r final_mae` (or `r 100*final_abserr` years), and an $R^2$ of `r final_r^2`.
+When assessed against the validation set, this model achieved a mean squared error of `r final_mse`, a mean absolute error (MAE) of `r final_mae` (or `r 100*final_mae` years), and an $R^2$ of `r final_r^2`.
 
 # Conclusions
 
 ## Comparison with "Predicting the Mean"
-Simply predicting the mean would result in a MSE of `r mean_mse`, an MAE of `r mean_mae`, and an $R^2$ of `r mean_r^2`.  Therefore, it is fair to say that this model significantly improves upon a worst-case model.
+Simply predicting the mean would result in a MSE of `r mean_mse`, an MAE of `r mean_mae`.  Therefore, it is fair to say that this model significantly improves upon a worst-case model.
 
 ## Comparison with State-of-the-Art
 Several other studies have also created brain age prediction models:
