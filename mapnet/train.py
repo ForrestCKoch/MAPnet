@@ -769,7 +769,6 @@ if __name__ == '__main__':
     ###########################################################################
     if not args.silent:
         pass
-        """
         summary(
             model,
             input_size = tuple(np.concatenate(
@@ -777,7 +776,6 @@ if __name__ == '__main__':
             )),
             device = "cuda" if args.cuda else "cpu"
         )    
-        """
 
     if args.test_model is not None:
         ###########################################################################
