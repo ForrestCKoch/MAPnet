@@ -812,10 +812,7 @@ if __name__ == '__main__':
             run_set = validate_ds
         else:
             run_set = train_ds if args.test_model == 'train' else test_ds
-<<<<<<< HEAD
 
-=======
->>>>>>> 49b6da609da3fdf0ceb3b51dfbce5bbb3f3bfd05
         data_loader = DataLoader(
             run_set, 
             num_workers=args.workers,
@@ -827,12 +824,8 @@ if __name__ == '__main__':
             model,
             data_loader,
             loss_funcs[args.loss](),
-<<<<<<< HEAD
             args.cuda,
             show_progress=False,
-=======
-            args.cuda,show_progress=True,
->>>>>>> 49b6da609da3fdf0ceb3b51dfbce5bbb3f3bfd05
             print_preds=args.print_preds
         )
         print("Total loss for the {} set is {}".format(
