@@ -390,6 +390,11 @@ def _get_parser():
         default='scaled-value',
         help="Specify what type of output the model should produce. 'value': model is trained to predict a single value (e.g age). 'scaled-value': same as 'value', but scaled down by a factor of 100. 'single-class': ages are treated as individual classes to be predited. 'ordinal-class': a class should be predicted if it is <= target age. 'gaussian': model is trained to predict a range of outputs centered around the target age. ['value','scaled-value','single-class','ordinal-class','gaussian']"
     )
+    parser.add_argument(
+        "--batch-norm",
+        action="store_true",
+        help="Specify to apply batch normalization after each conv layer."
+    )
     ###########################################################################
     #  Training Options
     ###########################################################################
@@ -764,7 +769,8 @@ if __name__ == '__main__':
             fc_actv=[actv_funcs[x] for x in args.fc_actv],
             even_padding=args.even_padding,
             pool=args.pooling,
-            output_size=len(conv_train_ages[0])
+            output_size=len(conv_train_ages[0]),
+            batch_norm=args.batch_norm
             #output_size=1
         )
         model.load_state_dict(model_in.state_dict())
@@ -903,7 +909,7 @@ if __name__ == '__main__':
             save_folder=save_folder,
             save_freq=args.save_freq,
             loss_func=loss_funcs[args.loss](),
-            optimizer=lambda x: torch.optim.Adam(x.parameters(),lr=args.lr),
+            optimizer=optimizer,
             scheduler=lambda x: torch.optim.lr_scheduler.ReduceLROnPlateau(
                     x, 
                     factor=args.decay,
